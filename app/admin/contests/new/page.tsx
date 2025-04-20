@@ -21,7 +21,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Checkbox } from "@/components/ui/checkbox";
 import { Calendar } from "@/components/ui/calendar";
 import {
   Popover,
@@ -42,18 +41,41 @@ export default function NewContestPage() {
   const [isLoading, setIsLoading] = useState(false);
   const [startDate, setStartDate] = useState<Date | undefined>(undefined);
   const [endDate, setEndDate] = useState<Date | undefined>(undefined);
+  const [isPublic, setIsPublic] = useState(true);
+  const [securityCode, setSecurityCode] = useState("");
 
   async function onSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setIsLoading(true);
 
+    // Prepare contest data for submission
+    const formData = new FormData(event.currentTarget);
+
+    const contestData = {
+      title: formData.get("title") as string,
+      description: formData.get("description") as string,
+      startDate: startDate,
+      endDate: endDate,
+      startTime: formData.get("startTime") as string,
+      endTime: formData.get("endTime") as string,
+      problemCount: parseInt(formData.get("problemCount") as string),
+      isPublic: isPublic,
+      securityCode: isPublic ? null : securityCode,
+    };
+
     // In a real app, you would submit to your backend
+    console.log("Contest data to submit:", contestData);
+
     // For demo purposes, we'll just redirect back to the contests page
     setTimeout(() => {
       router.push("/admin/contests");
       setIsLoading(false);
     }, 1000);
   }
+
+  const handleVisibilityChange = (value: string) => {
+    setIsPublic(value === "public");
+  };
 
   return (
     <div className="container mx-auto py-8 px-4 max-w-4xl">
@@ -102,6 +124,7 @@ export default function NewContestPage() {
                     </div>
                     <Input
                       id="title"
+                      name="title"
                       placeholder="e.g., Weekly Challenge #43"
                       required
                       className="w-full"
@@ -114,6 +137,7 @@ export default function NewContestPage() {
                     </Label>
                     <Textarea
                       id="description"
+                      name="description"
                       placeholder="Describe what the contest is about..."
                       rows={4}
                       required
@@ -196,6 +220,7 @@ export default function NewContestPage() {
                     </Label>
                     <Input
                       id="startTime"
+                      name="startTime"
                       type="time"
                       required
                       className="w-full"
@@ -207,6 +232,7 @@ export default function NewContestPage() {
                     </Label>
                     <Input
                       id="endTime"
+                      name="endTime"
                       type="time"
                       required
                       className="w-full"
@@ -227,6 +253,7 @@ export default function NewContestPage() {
                     </Label>
                     <Input
                       id="problemCount"
+                      name="problemCount"
                       type="number"
                       min="1"
                       placeholder="e.g., 5"
@@ -235,22 +262,60 @@ export default function NewContestPage() {
                     />
                   </div>
                   <div className="space-y-2">
-                    <Label htmlFor="difficulty" className="font-medium">
-                      Difficulty Level
+                    <Label htmlFor="contestVisibility" className="font-medium">
+                      Contest Visibility
                     </Label>
-                    <Select defaultValue="medium">
+                    <Select
+                      defaultValue="public"
+                      onValueChange={handleVisibilityChange}
+                    >
                       <SelectTrigger className="w-full">
-                        <SelectValue placeholder="Select difficulty" />
+                        <SelectValue placeholder="Select visibility" />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="easy">Easy</SelectItem>
-                        <SelectItem value="medium">Medium</SelectItem>
-                        <SelectItem value="hard">Hard</SelectItem>
-                        <SelectItem value="mixed">Mixed</SelectItem>
+                        <SelectItem value="public">Public</SelectItem>
+                        <SelectItem value="private">Private</SelectItem>
                       </SelectContent>
                     </Select>
                   </div>
                 </div>
+
+                {/* Security Code Field - Only shown when Private is selected */}
+                {!isPublic && (
+                  <div className="mt-4">
+                    <div className="space-y-2">
+                      <div className="flex items-center gap-2">
+                        <Label htmlFor="securityCode" className="font-medium">
+                          Security Code
+                        </Label>
+                        <TooltipProvider>
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <HelpCircle className="h-4 w-4 text-muted-foreground" />
+                            </TooltipTrigger>
+                            <TooltipContent className="max-w-xs">
+                              Participants will need this code to join the
+                              private contest
+                            </TooltipContent>
+                          </Tooltip>
+                        </TooltipProvider>
+                      </div>
+                      <Input
+                        id="securityCode"
+                        name="securityCode"
+                        placeholder="Enter security code for private contest"
+                        required={!isPublic}
+                        value={securityCode}
+                        onChange={(e) => setSecurityCode(e.target.value)}
+                        className="w-full"
+                      />
+                      <p className="text-sm text-muted-foreground mt-1">
+                        Share this code only with intended participants. They
+                        will need it to join the contest.
+                      </p>
+                    </div>
+                  </div>
+                )}
               </div>
             </div>
           </CardContent>
