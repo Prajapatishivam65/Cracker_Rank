@@ -35,6 +35,8 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
+import { db } from "@/drizzle/db";
+import { contests } from "@/drizzle/schema";
 
 export default function NewContestPage() {
   const router = useRouter();
@@ -54,8 +56,8 @@ export default function NewContestPage() {
     const contestData = {
       title: formData.get("title") as string,
       description: formData.get("description") as string,
-      startDate: startDate,
-      endDate: endDate,
+      startDate: startDate, // This should be a Date object
+      endDate: endDate, // This should be a Date object
       startTime: formData.get("startTime") as string,
       endTime: formData.get("endTime") as string,
       problemCount: parseInt(formData.get("problemCount") as string),
@@ -63,14 +65,48 @@ export default function NewContestPage() {
       securityCode: isPublic ? null : securityCode,
     };
 
-    // In a real app, you would submit to your backend
-    console.log("Contest data to submit:", contestData);
+    // Combine date and time for proper datetime value
+    const startDateTime = combineDateTime(
+      contestData.startDate!,
+      contestData.startTime
+    );
+    const endDateTime = combineDateTime(
+      contestData.endDate!,
+      contestData.endTime
+    );
 
-    // For demo purposes, we'll just redirect back to the contests page
-    setTimeout(() => {
+    try {
+      // Get the current user's ID from your auth context/service
+      // const userId = getCurrentUserId(); // TODO Replace with your auth method
+      const userId = "9264e762-31fb-4917-8097-a69d828826ef"; // Example UUID
+
+      const result = await db.insert(contests).values({
+        title: contestData.title,
+        description: contestData.description,
+        startDate: startDateTime,
+        endDate: endDateTime,
+        status: "draft",
+        createdBy: userId, // Use the actual UUID of the authenticated user
+        isPublic: contestData.isPublic,
+        securityCode: contestData.securityCode,
+      });
+
+      console.log("Contest created successfully:", result);
       router.push("/admin/contests");
+    } catch (error) {
+      console.error("Error creating contest:", error);
+      alert("Failed to create contest. Please try again.");
+    } finally {
       setIsLoading(false);
-    }, 1000);
+    }
+  }
+
+  // Helper function to combine date and time
+  function combineDateTime(date: Date, timeString: string): Date {
+    const [hours, minutes] = timeString.split(":").map(Number);
+    const dateTime = new Date(date);
+    dateTime.setHours(hours, minutes, 0, 0);
+    return dateTime;
   }
 
   const handleVisibilityChange = (value: string) => {

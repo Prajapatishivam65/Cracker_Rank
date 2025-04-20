@@ -18,6 +18,9 @@ export const userRoleEnum = pgEnum("user_roles", userRoles);
 export const contestStatuses = ["draft", "active", "completed"] as const;
 export const contestStatusEnum = pgEnum("contest_status", contestStatuses);
 
+export const difficulties = ["easy", "medium", "hard"] as const;
+export const difficultyEnum = pgEnum("difficulty", difficulties);
+
 export const submissionStatuses = [
   "pending",
   "accepted",
@@ -49,7 +52,7 @@ export const UserTable = pgTable("users", {
 
 // Contests Table
 export const contests = pgTable("contests", {
-  id: serial("id").primaryKey(),
+  id: uuid("id").primaryKey().defaultRandom(),
   title: varchar("title", { length: 255 }).notNull(),
   description: text("description"),
   startDate: timestamp("start_date").notNull(),

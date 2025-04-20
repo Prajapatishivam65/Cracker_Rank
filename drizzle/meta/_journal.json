@@ -15,6 +15,20 @@
       "when": 1745063001989,
       "tag": "0001_married_albert_cleary",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1745148817690,
+      "tag": "0002_perfect_sandman",
+      "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1745150120908,
+      "tag": "0003_heavy_matthew_murdock",
+      "breakpoints": true
     }
   ]
 }
