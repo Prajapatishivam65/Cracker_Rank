@@ -152,7 +152,7 @@ export default function NewContestPage() {
                           <TooltipTrigger asChild>
                             <HelpCircle className="h-4 w-4 text-muted-foreground" />
                           </TooltipTrigger>
-                          <TooltipContent className="max-w-xs">
+                          <TooltipContent className="max-w-xs text-white">
                             Give your contest a clear, descriptive name
                           </TooltipContent>
                         </Tooltip>

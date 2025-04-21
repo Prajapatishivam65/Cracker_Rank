@@ -1,0 +1,124 @@
+"use client";
+
+import type React from "react";
+
+import { useState } from "react";
+import { useRouter } from "next/navigation";
+import { toast } from "sonner";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { createProblem } from "@/lib/api/problems";
+import DetailsTab from "./details-tab";
+import ExamplesTab from "./examples-tab";
+import StarterCodeTab from "./starter-code-tab";
+import TestCasesTab from "./test-cases-tab";
+import HintsConstraintsTab from "./hints-constraints-tab";
+import { useProblemForm } from "@/hooks/use-problem-form";
+
+export default function NewProblemForm({ contestId }: { contestId: string }) {
+  const router = useRouter();
+  const [isLoading, setIsLoading] = useState(false);
+  const [step, setStep] = useState<string>("details");
+  const { problem, handlers } = useProblemForm();
+
+  async function onSubmit(event: React.FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    setIsLoading(true);
+
+    try {
+      await createProblem(contestId, problem);
+
+      toast.success("Problem created successfully!", {
+        description: `"${problem.title}" has been added to the contest.`,
+      });
+
+      router.push(`/admin/contests/${contestId}`);
+    } catch (error) {
+      console.error("Error creating problem:", error);
+      console.error("Error creating problem:", error);
+      toast.error("Error creating problem", {
+        description:
+          error instanceof Error ? error.message : "An unknown error occurred",
+      });
+      setIsLoading(false);
+    }
+  }
+
+  return (
+    <form onSubmit={onSubmit}>
+      <Tabs
+        defaultValue="details"
+        className="w-full"
+        value={step}
+        onValueChange={setStep}
+      >
+        <TabsList className="grid w-full grid-cols-5">
+          <TabsTrigger value="details">Details</TabsTrigger>
+          <TabsTrigger value="examples">Examples</TabsTrigger>
+          <TabsTrigger value="code">Starter Code</TabsTrigger>
+          <TabsTrigger value="testcases">Test Cases</TabsTrigger>
+          <TabsTrigger value="hints">Hints & Constraints</TabsTrigger>
+        </TabsList>
+
+        <TabsContent value="details" className="mt-6">
+          <DetailsTab
+            problem={problem}
+            handleInputChange={handlers.handleInputChange}
+            onNext={() => setStep("examples")}
+          />
+        </TabsContent>
+
+        <TabsContent value="examples" className="mt-6">
+          <ExamplesTab
+            examples={problem.examples}
+            handleExampleChange={handlers.handleExampleChange}
+            addExample={handlers.addExample}
+            removeExample={handlers.removeExample}
+            onPrevious={() => setStep("details")}
+            onNext={() => setStep("code")}
+          />
+        </TabsContent>
+
+        <TabsContent value="code" className="mt-6">
+          <StarterCodeTab
+            starterCode={problem.starterCode}
+            handleStarterCodeChange={handlers.handleStarterCodeChange}
+            onPrevious={() => setStep("examples")}
+            onNext={() => setStep("testcases")}
+          />
+        </TabsContent>
+
+        <TabsContent value="testcases" className="mt-6">
+          <TestCasesTab
+            testCases={problem.testCases}
+            hiddenTestCases={problem.hiddenTestCases}
+            handlers={{
+              handleTestCaseChange: handlers.handleTestCaseChange,
+              handleTestCaseInputChange: handlers.handleTestCaseInputChange,
+              addTestCase: handlers.addTestCase,
+              removeTestCase: handlers.removeTestCase,
+              addTestCaseInputLine: handlers.addTestCaseInputLine,
+              removeTestCaseInputLine: handlers.removeTestCaseInputLine,
+            }}
+            onPrevious={() => setStep("code")}
+            onNext={() => setStep("hints")}
+          />
+        </TabsContent>
+
+        <TabsContent value="hints" className="mt-6">
+          <HintsConstraintsTab
+            constraints={problem.constraints}
+            hints={problem.hints}
+            handleConstraintChange={handlers.handleConstraintChange}
+            handleHintChange={handlers.handleHintChange}
+            addConstraint={handlers.addConstraint}
+            removeConstraint={handlers.removeConstraint}
+            addHint={handlers.addHint}
+            removeHint={handlers.removeHint}
+            onPrevious={() => setStep("testcases")}
+            isLoading={isLoading}
+          />
+        </TabsContent>
+      </Tabs>
+    </form>
+  );
+}

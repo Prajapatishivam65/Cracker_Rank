@@ -7,6 +7,8 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { toast } from "sonner";
+
 import {
   Card,
   CardContent,
@@ -18,7 +20,7 @@ import {
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Trash } from "lucide-react";
 
-// Define types based on your sample problem structure
+// Define types based on your schema structure
 type Example = {
   input: string;
   output: string;
@@ -56,6 +58,7 @@ export default function NewProblemPage({
 }) {
   const router = useRouter();
   const [isLoading, setIsLoading] = useState(false);
+  const [step, setStep] = useState<string>("details");
 
   // Initialize problem state with default empty values
   const [problem, setProblem] = useState<Problem>({
@@ -267,31 +270,199 @@ export default function NewProblemPage({
     event.preventDefault();
     setIsLoading(true);
 
-    // In a real app, you would submit to your backend
-    // For example:
+    // Create an organized log for debugging
+    console.log("Preparing to submit problem:", {
+      title: problem.title,
+      description: `${problem.description.substring(0, 50)}...`,
+      difficulty: problem.difficulty,
+      contestId: params.contestId,
+      examples: problem.examples.length,
+      testCases: problem.testCases.length + problem.hiddenTestCases.length,
+    });
+
     try {
-      // Format any data if needed before submission
-      const formattedProblem = {
-        ...problem,
-        contestId: params.contestId,
-      };
+      // Step 1: Create the main problem record
+      console.log("STEP 1: Creating main problem record");
+      const problemResponse = await fetch("/api/problems", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          contestId: params.contestId,
+          title: problem.title,
+          description: problem.description,
+          difficulty: problem.difficulty.toLowerCase(), // Convert to match enum lowercase values
+          timeLimit: problem.timeLimit,
+          memoryLimit: problem.memoryLimit,
+          order: 0, // Default order or you could fetch the count of existing problems
+        }),
+      });
 
-      console.log("Submitting problem:", formattedProblem);
+      if (!problemResponse.ok) {
+        throw new Error(
+          `Failed to create problem: ${problemResponse.statusText}`
+        );
+      }
 
-      // Mock API call
-      // await fetch('/api/problems', {
-      //   method: 'POST',
-      //   headers: { 'Content-Type': 'application/json' },
-      //   body: JSON.stringify(formattedProblem),
-      // });
+      const problemData = await problemResponse.json();
+      const problemId = problemData.id;
+      console.log(`✅ Created problem with ID: ${problemId}`);
 
-      // For demo purposes, just redirect after a delay
-      setTimeout(() => {
-        router.push(`/admin/contests/${params.contestId}`);
-        setIsLoading(false);
-      }, 1000);
+      // Step 2: Save constraints
+      console.log("STEP 2: Saving constraints");
+      const constraintPromises = problem.constraints
+        .filter((constraint) => constraint.trim() !== "")
+        .map(async (constraint, index) => {
+          return fetch("/api/constraints", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              problemId,
+              content: constraint,
+              order: index,
+            }),
+          });
+        });
+
+      await Promise.all(constraintPromises);
+      console.log(`✅ Saved ${constraintPromises.length} constraints`);
+
+      // Step 3: Save hints
+      console.log("STEP 3: Saving hints");
+      const hintPromises = problem.hints
+        .filter((hint) => hint.trim() !== "")
+        .map(async (hint, index) => {
+          return fetch("/api/hints", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              problemId,
+              content: hint,
+              order: index,
+            }),
+          });
+        });
+
+      await Promise.all(hintPromises);
+      console.log(`✅ Saved ${hintPromises.length} hints`);
+
+      // Step 4: Save examples
+      console.log("STEP 4: Saving examples");
+      const examplePromises = problem.examples
+        .filter(
+          (example) =>
+            example.input.trim() !== "" && example.output.trim() !== ""
+        )
+        .map(async (example, index) => {
+          return fetch("/api/examples", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              problemId,
+              input: example.input,
+              output: example.output,
+              explanation: example.explanation || null,
+              order: index,
+            }),
+          });
+        });
+
+      await Promise.all(examplePromises);
+      console.log(`✅ Saved ${examplePromises.length} examples`);
+
+      // Step 5: Save starter code for each language
+      console.log("STEP 5: Saving starter code templates");
+      const starterCodePromises = Object.entries(problem.starterCode)
+        .filter(([_, code]) => code.trim() !== "")
+        .map(async ([language, code]) => {
+          return fetch("/api/starter-code", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              problemId,
+              language, // language is already lowercase (cpp, java, python)
+              code,
+            }),
+          });
+        });
+
+      await Promise.all(starterCodePromises);
+      console.log(
+        `✅ Saved starter code for ${starterCodePromises.length} languages`
+      );
+
+      // Step 6: Save visible test cases
+      console.log("STEP 6: Saving visible test cases");
+      const testCasePromises = problem.testCases
+        .filter((tc) => tc.expectedOutput.trim() !== "")
+        .map(async (testCase, index) => {
+          // Filter out empty input lines
+          const filteredInput = testCase.input.filter(
+            (line) => line.trim() !== ""
+          );
+
+          return fetch("/api/test-cases", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              problemId,
+              inputLines: filteredInput.length > 0 ? filteredInput : [""], // Ensure at least one input line
+              expectedOutput: testCase.expectedOutput,
+              isHidden: false,
+              order: index,
+            }),
+          });
+        });
+
+      await Promise.all(testCasePromises);
+      console.log(`✅ Saved ${testCasePromises.length} visible test cases`);
+
+      // Step 7: Save hidden test cases
+      console.log("STEP 7: Saving hidden test cases");
+      const hiddenTestCasePromises = problem.hiddenTestCases
+        .filter((tc) => tc.expectedOutput.trim() !== "")
+        .map(async (testCase, index) => {
+          // Filter out empty input lines
+          const filteredInput = testCase.input.filter(
+            (line) => line.trim() !== ""
+          );
+
+          return fetch("/api/test-cases", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              problemId,
+              inputLines: filteredInput.length > 0 ? filteredInput : [""], // Ensure at least one input line
+              expectedOutput: testCase.expectedOutput,
+              isHidden: true,
+              order: index,
+            }),
+          });
+        });
+
+      await Promise.all(hiddenTestCasePromises);
+      console.log(
+        `✅ Saved ${hiddenTestCasePromises.length} hidden test cases`
+      );
+
+      console.log("✅ PROBLEM CREATION COMPLETE");
+
+      // Show success message
+      toast({
+        title: "Problem created successfully!",
+        description: `"${problem.title}" has been added to the contest.`,
+      });
+
+      // Redirect back to the contest page
+      router.push(`/admin/contests/${params.contestId}`);
     } catch (error) {
       console.error("Error creating problem:", error);
+      toast({
+        title: "Error creating problem",
+        description:
+          error instanceof Error ? error.message : "An unknown error occurred",
+        variant: "destructive",
+      });
+    } finally {
       setIsLoading(false);
     }
   }
@@ -304,7 +475,12 @@ export default function NewProblemPage({
       </p>
 
       <form onSubmit={onSubmit}>
-        <Tabs defaultValue="details" className="w-full">
+        <Tabs
+          defaultValue="details"
+          className="w-full"
+          value={step}
+          onValueChange={setStep}
+        >
           <TabsList className="grid w-full grid-cols-5">
             <TabsTrigger value="details">Details</TabsTrigger>
             <TabsTrigger value="examples">Examples</TabsTrigger>
@@ -389,6 +565,11 @@ export default function NewProblemPage({
                   </div>
                 </div>
               </CardContent>
+              <CardFooter className="flex justify-end space-x-2">
+                <Button type="button" onClick={() => setStep("examples")}>
+                  Next: Examples
+                </Button>
+              </CardFooter>
             </Card>
           </TabsContent>
 
@@ -471,6 +652,18 @@ export default function NewProblemPage({
                   Add Another Example
                 </Button>
               </CardContent>
+              <CardFooter className="flex justify-between space-x-2">
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => setStep("details")}
+                >
+                  Previous: Details
+                </Button>
+                <Button type="button" onClick={() => setStep("code")}>
+                  Next: Starter Code
+                </Button>
+              </CardFooter>
             </Card>
           </TabsContent>
 
@@ -521,9 +714,20 @@ export default function NewProblemPage({
                       }
                     />
                   </div>
-                  {/* You can add more languages or make this dynamic if needed */}
                 </div>
               </CardContent>
+              <CardFooter className="flex justify-between space-x-2">
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => setStep("examples")}
+                >
+                  Previous: Examples
+                </Button>
+                <Button type="button" onClick={() => setStep("testcases")}>
+                  Next: Test Cases
+                </Button>
+              </CardFooter>
             </Card>
           </TabsContent>
 
@@ -735,6 +939,18 @@ export default function NewProblemPage({
                   </Button>
                 </div>
               </CardContent>
+              <CardFooter className="flex justify-between space-x-2">
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => setStep("code")}
+                >
+                  Previous: Starter Code
+                </Button>
+                <Button type="button" onClick={() => setStep("hints")}>
+                  Next: Hints & Constraints
+                </Button>
+              </CardFooter>
             </Card>
           </TabsContent>
 
@@ -744,7 +960,7 @@ export default function NewProblemPage({
               <CardHeader>
                 <CardTitle>Hints & Constraints</CardTitle>
                 <CardDescription>
-                  Add problem constraints and hints for participants.
+                  Add constraints and optional hints for the problem.
                 </CardDescription>
               </CardHeader>
               <CardContent className="space-y-6">
@@ -752,10 +968,10 @@ export default function NewProblemPage({
                 <div className="space-y-4">
                   <h3 className="text-lg font-medium">Constraints</h3>
                   {problem.constraints.map((constraint, index) => (
-                    <div key={index} className="flex gap-2">
+                    <div key={index} className="flex items-center gap-2">
                       <Input
-                        placeholder="e.g., 1 ≤ N ≤ 100"
                         value={constraint}
+                        placeholder="e.g., 1 ≤ N ≤ 10^5"
                         onChange={(e) =>
                           handleConstraintChange(index, e.target.value)
                         }
@@ -783,12 +999,13 @@ export default function NewProblemPage({
 
                 {/* HINTS */}
                 <div className="space-y-4">
-                  <h3 className="text-lg font-medium">Hints</h3>
+                  <h3 className="text-lg font-medium">Hints (Optional)</h3>
                   {problem.hints.map((hint, index) => (
-                    <div key={index} className="flex gap-2">
-                      <Input
-                        placeholder="Provide a helpful hint"
+                    <div key={index} className="flex items-center gap-2">
+                      <Textarea
+                        rows={2}
                         value={hint}
+                        placeholder="Add a helpful hint"
                         onChange={(e) =>
                           handleHintChange(index, e.target.value)
                         }
@@ -810,14 +1027,13 @@ export default function NewProblemPage({
                   </Button>
                 </div>
               </CardContent>
-              <CardFooter className="flex justify-between">
+              <CardFooter className="flex justify-between space-x-2">
                 <Button
                   type="button"
                   variant="outline"
-                  onClick={() => router.back()}
-                  disabled={isLoading}
+                  onClick={() => setStep("testcases")}
                 >
-                  Cancel
+                  Previous: Test Cases
                 </Button>
                 <Button type="submit" disabled={isLoading}>
                   {isLoading ? "Creating..." : "Create Problem"}

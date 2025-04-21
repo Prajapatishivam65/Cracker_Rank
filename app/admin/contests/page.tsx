@@ -338,7 +338,7 @@ export default function ContestsPage() {
               </p>
               <Button
                 onClick={() => router.push("/admin/contests/new")}
-                className="flex items-center gap-2 bg-primary text-primary-foreground hover:bg-primary/90 mx-auto shadow-md hover:shadow-lg transition-all"
+                className="flex items-center gap-2 bg-primary text-white hover:bg-primary/90 mx-auto shadow-md hover:shadow-lg transition-all"
               >
                 <PlusCircle className="h-4 w-4" />
                 {activeTab === "all"

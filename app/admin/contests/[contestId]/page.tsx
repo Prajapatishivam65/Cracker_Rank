@@ -29,6 +29,7 @@ import {
   CalendarRange,
   Info,
   Award,
+  Edit2,
 } from "lucide-react";
 import { format } from "date-fns";
 import { cn } from "@/lib/utils";
@@ -173,8 +174,12 @@ const ContestViewPage = () => {
     return durationStr.trim();
   };
 
+  const handleAddProblems = () => {
+    router.push(`/admin/contests/${contestId}/problems`);
+  };
+
   const handleEditContest = () => {
-    router.push(`/contests/edit/${contestId}`);
+    router.push(`/admin/contests/${contestId}/edit`);
   };
 
   const handleDeleteConfirm = () => {
@@ -385,18 +390,19 @@ const ContestViewPage = () => {
               <CardFooter className="flex justify-end gap-3 pt-2 border-t bg-muted/30">
                 <Button
                   variant="outline"
-                  className="border-destructive text-destructive hover:bg-destructive/10"
-                  onClick={handleDeleteConfirm}
+                  className="text-whit hover:bg-primary/70 "
+                  // onClick={handleDeleteConfirm}
+                  // TOdo: Add edit  functionality of problems
                 >
-                  <Trash2 className="h-4 w-4 mr-2" />
-                  Delete
+                  <Edit2 className="h-4 w-4 mr-2" />
+                  Edit Problems
                 </Button>
                 <Button
-                  onClick={handleEditContest}
+                  onClick={handleAddProblems}
                   className="text-white hover:bg-primary/70"
                 >
                   <Edit className="h-4 w-4 mr-2 text-white" />
-                  Edit Contest
+                  Add Probems
                 </Button>
               </CardFooter>
             </Card>
