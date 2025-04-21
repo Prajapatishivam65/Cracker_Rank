@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -13,6 +14,7 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Trash } from "lucide-react";
+import { toast } from "sonner";
 import type { TestCase } from "@/hooks/use-problem-form";
 
 interface TestCasesTabProps {
@@ -48,6 +50,7 @@ interface TestCasesTabProps {
   };
   onPrevious: () => void;
   onNext: () => void;
+  problemId: string | null;
 }
 
 export default function TestCasesTab({
@@ -56,7 +59,88 @@ export default function TestCasesTab({
   handlers,
   onPrevious,
   onNext,
+  problemId,
 }: TestCasesTabProps) {
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  const handleSaveTestCases = async () => {
+    if (!problemId) {
+      toast.error("Problem ID missing", {
+        description: "Please save the problem details first.",
+      });
+      return;
+    }
+
+    setIsSubmitting(true);
+    try {
+      // Save visible test cases
+      console.log("Saving visible test cases");
+      const testCasePromises = testCases
+        .filter((tc) => tc.expectedOutput.trim() !== "")
+        .map(async (testCase, index) => {
+          // Filter out empty input lines
+          const filteredInput = testCase.input.filter(
+            (line) => line.trim() !== ""
+          );
+
+          return fetch("/api/test-cases", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              problemId,
+              inputLines: filteredInput.length > 0 ? filteredInput : [""], // Ensure at least one input line
+              expectedOutput: testCase.expectedOutput,
+              isHidden: false,
+              order: index,
+            }),
+          });
+        });
+
+      await Promise.all(testCasePromises);
+      console.log(`Saved ${testCasePromises.length} visible test cases`);
+
+      // Save hidden test cases
+      console.log("Saving hidden test cases");
+      const hiddenTestCasePromises = hiddenTestCases
+        .filter((tc) => tc.expectedOutput.trim() !== "")
+        .map(async (testCase, index) => {
+          // Filter out empty input lines
+          const filteredInput = testCase.input.filter(
+            (line) => line.trim() !== ""
+          );
+
+          return fetch("/api/test-cases", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              problemId,
+              inputLines: filteredInput.length > 0 ? filteredInput : [""], // Ensure at least one input line
+              expectedOutput: testCase.expectedOutput,
+              isHidden: true,
+              order: index,
+            }),
+          });
+        });
+
+      await Promise.all(hiddenTestCasePromises);
+      console.log(`Saved ${hiddenTestCasePromises.length} hidden test cases`);
+
+      toast.success("Test cases saved", {
+        description: "You can now add hints and constraints to your problem.",
+      });
+
+      onNext();
+    } catch (error) {
+      console.error("Error saving test cases:", error);
+      toast.error("Error saving test cases", {
+        description:
+          error instanceof Error ? error.message : "An unknown error occurred",
+      });
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
   return (
     <Card>
       <CardHeader>
@@ -268,8 +352,12 @@ export default function TestCasesTab({
         <Button type="button" variant="outline" onClick={onPrevious}>
           Previous: Starter Code
         </Button>
-        <Button type="button" onClick={onNext}>
-          Next: Hints & Constraints
+        <Button
+          type="button"
+          onClick={handleSaveTestCases}
+          disabled={isSubmitting}
+        >
+          {isSubmitting ? "Saving..." : "Save & Continue"}
         </Button>
       </CardFooter>
     </Card>

@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -12,19 +13,95 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import { toast } from "sonner";
 import type { Problem } from "@/hooks/use-problem-form";
+import { getCurrentUser } from "@/auth/currentUser";
 
 interface DetailsTabProps {
   problem: Problem;
   handleInputChange: (field: keyof Problem, value: any) => void;
   onNext: () => void;
+  contestId: string;
+  setProblemId: (id: string) => void;
 }
 
 export default function DetailsTab({
   problem,
   handleInputChange,
   onNext,
+  contestId,
+  setProblemId,
 }: DetailsTabProps) {
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  // Todo newd to add validation for the problem title and description
+  const handleSaveDetails = async () => {
+    if (!problem.title || !problem.description) {
+      toast.error("Missing required fields", {
+        description: "Please fill in all required fields before continuing.",
+      });
+      return;
+    }
+
+    const user = await getCurrentUser(); // ⬅️ Await this
+    if (!user) {
+      toast.error("User not authenticated", {
+        description: "Please login again.",
+      });
+      return;
+    }
+
+    setIsSubmitting(true);
+    try {
+      console.log("Creating main problem record");
+      console.log("contest id", contestId);
+      console.log("problem", problem);
+
+      const problemResponse = await fetch("/api/problems", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          contestId,
+          title: problem.title,
+          description: problem.description,
+          difficulty: problem.difficulty?.toLowerCase(),
+          timeLimit: problem.timeLimit || "1 second",
+          memoryLimit: problem.memoryLimit || "256 megabytes",
+          order: 0,
+          createdBy: user.id, // ✅ pulled from resolved promise
+        }),
+      });
+
+      if (!problemResponse.ok) {
+        const errorData = await problemResponse.json();
+        throw new Error(
+          errorData?.error ||
+            `Failed to create problem: ${problemResponse.statusText}`
+        );
+      }
+
+      const problemData = await problemResponse.json();
+      const newProblemId = problemData.id;
+      console.log(`Created problem with ID: ${newProblemId}`);
+
+      setProblemId(newProblemId);
+
+      toast.success("Problem details saved", {
+        description: "You can now add examples to your problem.",
+      });
+
+      onNext();
+    } catch (error) {
+      console.error("Error saving problem details:", error);
+      toast.error("Error saving problem details", {
+        description:
+          error instanceof Error ? error.message : "An unknown error occurred",
+      });
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
   return (
     <Card>
       <CardHeader>
@@ -93,8 +170,12 @@ export default function DetailsTab({
         </div>
       </CardContent>
       <CardFooter className="flex justify-end space-x-2">
-        <Button type="button" onClick={onNext}>
-          Next: Examples
+        <Button
+          type="button"
+          onClick={handleSaveDetails}
+          disabled={isSubmitting}
+        >
+          {isSubmitting ? "Saving..." : "Save & Continue"}
         </Button>
       </CardFooter>
     </Card>

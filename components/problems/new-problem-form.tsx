@@ -6,7 +6,6 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { createProblem } from "@/lib/api/problems";
 import DetailsTab from "./details-tab";
 import ExamplesTab from "./examples-tab";
 import StarterCodeTab from "./starter-code-tab";
@@ -19,26 +18,37 @@ export default function NewProblemForm({ contestId }: { contestId: string }) {
   const [isLoading, setIsLoading] = useState(false);
   const [step, setStep] = useState<string>("details");
   const { problem, handlers } = useProblemForm();
+  const [problemId, setProblemId] = useState<string | null>(null);
 
   async function onSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setIsLoading(true);
 
     try {
-      await createProblem(contestId, problem);
+      // Check if we have a valid problem before proceeding
+      if (!problemId || !problem.title) {
+        throw new Error("Problem details are incomplete");
+      }
+
+      // Final submission logic would typically go here
+      // For now, we're just showing a success toast and redirecting
 
       toast.success("Problem created successfully!", {
         description: `"${problem.title}" has been added to the contest.`,
       });
 
-      router.push(`/admin/contests/${contestId}`);
+      // Give the toast a moment to appear before redirecting
+      setTimeout(() => {
+        router.push(`/admin/contests/${contestId}`);
+      }, 500);
     } catch (error) {
       console.error("Error creating problem:", error);
-      console.error("Error creating problem:", error);
+
       toast.error("Error creating problem", {
         description:
           error instanceof Error ? error.message : "An unknown error occurred",
       });
+    } finally {
       setIsLoading(false);
     }
   }
@@ -53,10 +63,18 @@ export default function NewProblemForm({ contestId }: { contestId: string }) {
       >
         <TabsList className="grid w-full grid-cols-5">
           <TabsTrigger value="details">Details</TabsTrigger>
-          <TabsTrigger value="examples">Examples</TabsTrigger>
-          <TabsTrigger value="code">Starter Code</TabsTrigger>
-          <TabsTrigger value="testcases">Test Cases</TabsTrigger>
-          <TabsTrigger value="hints">Hints & Constraints</TabsTrigger>
+          <TabsTrigger value="examples" disabled={!problemId}>
+            Examples
+          </TabsTrigger>
+          <TabsTrigger value="code" disabled={!problemId}>
+            Starter Code
+          </TabsTrigger>
+          <TabsTrigger value="testcases" disabled={!problemId}>
+            Test Cases
+          </TabsTrigger>
+          <TabsTrigger value="hints" disabled={!problemId}>
+            Hints & Constraints
+          </TabsTrigger>
         </TabsList>
 
         <TabsContent value="details" className="mt-6">
@@ -64,6 +82,8 @@ export default function NewProblemForm({ contestId }: { contestId: string }) {
             problem={problem}
             handleInputChange={handlers.handleInputChange}
             onNext={() => setStep("examples")}
+            contestId={contestId}
+            setProblemId={setProblemId}
           />
         </TabsContent>
 
@@ -75,6 +95,7 @@ export default function NewProblemForm({ contestId }: { contestId: string }) {
             removeExample={handlers.removeExample}
             onPrevious={() => setStep("details")}
             onNext={() => setStep("code")}
+            problemId={problemId}
           />
         </TabsContent>
 
@@ -84,6 +105,7 @@ export default function NewProblemForm({ contestId }: { contestId: string }) {
             handleStarterCodeChange={handlers.handleStarterCodeChange}
             onPrevious={() => setStep("examples")}
             onNext={() => setStep("testcases")}
+            problemId={problemId}
           />
         </TabsContent>
 
@@ -101,6 +123,7 @@ export default function NewProblemForm({ contestId }: { contestId: string }) {
             }}
             onPrevious={() => setStep("code")}
             onNext={() => setStep("hints")}
+            problemId={problemId}
           />
         </TabsContent>
 
@@ -116,6 +139,7 @@ export default function NewProblemForm({ contestId }: { contestId: string }) {
             removeHint={handlers.removeHint}
             onPrevious={() => setStep("testcases")}
             isLoading={isLoading}
+            problemId={problemId}
           />
         </TabsContent>
       </Tabs>

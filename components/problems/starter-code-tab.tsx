@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
@@ -11,6 +12,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import { toast } from "sonner";
 import type { StarterCode } from "@/hooks/use-problem-form";
 
 interface StarterCodeTabProps {
@@ -18,6 +20,7 @@ interface StarterCodeTabProps {
   handleStarterCodeChange: (language: string, code: string) => void;
   onPrevious: () => void;
   onNext: () => void;
+  problemId: string | null;
 }
 
 export default function StarterCodeTab({
@@ -25,7 +28,57 @@ export default function StarterCodeTab({
   handleStarterCodeChange,
   onPrevious,
   onNext,
+  problemId,
 }: StarterCodeTabProps) {
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  const handleSaveStarterCode = async () => {
+    if (!problemId) {
+      toast.error("Problem ID missing", {
+        description: "Please save the problem details first.",
+      });
+      return;
+    }
+
+    setIsSubmitting(true);
+    try {
+      // Save starter code for each language
+      console.log("Saving starter code templates");
+      const starterCodePromises = Object.entries(starterCode)
+        .filter(([_, code]) => code.trim() !== "")
+        .map(async ([language, code]) => {
+          return fetch("/api/starter-code", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              problemId,
+              language, // language is already lowercase (cpp, java, python)
+              code,
+            }),
+          });
+        });
+
+      await Promise.all(starterCodePromises);
+      console.log(
+        `Saved starter code for ${starterCodePromises.length} languages`
+      );
+
+      toast.success("Starter code saved", {
+        description: "You can now add test cases to your problem.",
+      });
+
+      onNext();
+    } catch (error) {
+      console.error("Error saving starter code:", error);
+      toast.error("Error saving starter code", {
+        description:
+          error instanceof Error ? error.message : "An unknown error occurred",
+      });
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
   return (
     <Card>
       <CardHeader>
@@ -74,8 +127,12 @@ export default function StarterCodeTab({
         <Button type="button" variant="outline" onClick={onPrevious}>
           Previous: Examples
         </Button>
-        <Button type="button" onClick={onNext}>
-          Next: Test Cases
+        <Button
+          type="button"
+          onClick={handleSaveStarterCode}
+          disabled={isSubmitting}
+        >
+          {isSubmitting ? "Saving..." : "Save & Continue"}
         </Button>
       </CardFooter>
     </Card>

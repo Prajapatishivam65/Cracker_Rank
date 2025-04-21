@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
@@ -12,6 +13,7 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Trash } from "lucide-react";
+import { toast } from "sonner";
 import type { Example } from "@/hooks/use-problem-form";
 
 interface ExamplesTabProps {
@@ -25,6 +27,7 @@ interface ExamplesTabProps {
   removeExample: (index: number) => void;
   onPrevious: () => void;
   onNext: () => void;
+  problemId: string | null;
 }
 
 export default function ExamplesTab({
@@ -34,7 +37,67 @@ export default function ExamplesTab({
   removeExample,
   onPrevious,
   onNext,
+  problemId,
 }: ExamplesTabProps) {
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  const handleSaveExamples = async () => {
+    if (!problemId) {
+      toast.error("Problem ID missing", {
+        description: "Please save the problem details first.",
+      });
+      return;
+    }
+
+    setIsSubmitting(true);
+    try {
+      // Save examples
+      console.log("Saving examples");
+      const validExamples = examples.filter(
+        (example) => example.input.trim() !== "" && example.output.trim() !== ""
+      );
+
+      if (validExamples.length === 0) {
+        toast.error("No valid examples", {
+          description: "Please add at least one example with input and output.",
+        });
+        setIsSubmitting(false);
+        return;
+      }
+
+      const examplePromises = validExamples.map(async (example, index) => {
+        return fetch("/api/examples", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            problemId,
+            input: example.input,
+            output: example.output,
+            explanation: example.explanation || null,
+            order: index,
+          }),
+        });
+      });
+
+      await Promise.all(examplePromises);
+      console.log(`Saved ${examplePromises.length} examples`);
+
+      toast.success("Examples saved", {
+        description: "You can now add starter code to your problem.",
+      });
+
+      onNext();
+    } catch (error) {
+      console.error("Error saving examples:", error);
+      toast.error("Error saving examples", {
+        description:
+          error instanceof Error ? error.message : "An unknown error occurred",
+      });
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
   return (
     <Card>
       <CardHeader>
@@ -109,8 +172,12 @@ export default function ExamplesTab({
         <Button type="button" variant="outline" onClick={onPrevious}>
           Previous: Details
         </Button>
-        <Button type="button" onClick={onNext}>
-          Next: Starter Code
+        <Button
+          type="button"
+          onClick={handleSaveExamples}
+          disabled={isSubmitting}
+        >
+          {isSubmitting ? "Saving..." : "Save & Continue"}
         </Button>
       </CardFooter>
     </Card>

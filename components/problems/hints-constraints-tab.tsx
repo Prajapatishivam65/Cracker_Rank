@@ -1,5 +1,4 @@
 "use client";
-
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -24,6 +23,7 @@ interface HintsConstraintsTabProps {
   removeHint: (index: number) => void;
   onPrevious: () => void;
   isLoading: boolean;
+  problemId: string | null; // Added missing prop
 }
 
 export default function HintsConstraintsTab({
@@ -37,7 +37,17 @@ export default function HintsConstraintsTab({
   removeHint,
   onPrevious,
   isLoading,
+  problemId, // Added the missing prop
 }: HintsConstraintsTabProps) {
+  // Ensure we have at least one constraint and hint
+  if (constraints.length === 0) {
+    addConstraint();
+  }
+
+  if (hints.length === 0) {
+    addHint();
+  }
+
   return (
     <Card>
       <CardHeader>
@@ -57,23 +67,21 @@ export default function HintsConstraintsTab({
                 placeholder="e.g., 1 ≤ N ≤ 10^5"
                 onChange={(e) => handleConstraintChange(index, e.target.value)}
               />
-              {constraints.length > 1 && (
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="icon"
-                  onClick={() => removeConstraint(index)}
-                >
-                  <Trash className="h-4 w-4" />
-                </Button>
-              )}
+              <Button
+                type="button"
+                variant="outline"
+                size="icon"
+                onClick={() => removeConstraint(index)}
+                disabled={constraints.length <= 1}
+              >
+                <Trash className="h-4 w-4" />
+              </Button>
             </div>
           ))}
           <Button type="button" variant="outline" onClick={addConstraint}>
             Add Constraint
           </Button>
         </div>
-
         {/* HINTS */}
         <div className="space-y-4">
           <h3 className="text-lg font-medium">Hints (Optional)</h3>
@@ -85,16 +93,15 @@ export default function HintsConstraintsTab({
                 placeholder="Add a helpful hint"
                 onChange={(e) => handleHintChange(index, e.target.value)}
               />
-              {hints.length > 1 && (
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="icon"
-                  onClick={() => removeHint(index)}
-                >
-                  <Trash className="h-4 w-4" />
-                </Button>
-              )}
+              <Button
+                type="button"
+                variant="outline"
+                size="icon"
+                onClick={() => removeHint(index)}
+                disabled={hints.length <= 1}
+              >
+                <Trash className="h-4 w-4" />
+              </Button>
             </div>
           ))}
           <Button type="button" variant="outline" onClick={addHint}>
@@ -106,7 +113,7 @@ export default function HintsConstraintsTab({
         <Button type="button" variant="outline" onClick={onPrevious}>
           Previous: Test Cases
         </Button>
-        <Button type="submit" disabled={isLoading}>
+        <Button type="submit" disabled={isLoading || !problemId}>
           {isLoading ? "Creating..." : "Create Problem"}
         </Button>
       </CardFooter>
