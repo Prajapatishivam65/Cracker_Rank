@@ -22,6 +22,7 @@ interface DetailsTabProps {
   handleInputChange: (field: keyof Problem, value: any) => void;
   onNext: () => void;
   contestId: string;
+  userId: string;
   setProblemId: (id: string) => void;
 }
 
@@ -31,6 +32,7 @@ export default function DetailsTab({
   onNext,
   contestId,
   setProblemId,
+  userId,
 }: DetailsTabProps) {
   const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -43,13 +45,7 @@ export default function DetailsTab({
       return;
     }
 
-    const user = await getCurrentUser(); // ⬅️ Await this
-    if (!user) {
-      toast.error("User not authenticated", {
-        description: "Please login again.",
-      });
-      return;
-    }
+    // const user = await getCurrentUser({ withFullUser: true });
 
     setIsSubmitting(true);
     try {
@@ -68,7 +64,7 @@ export default function DetailsTab({
           timeLimit: problem.timeLimit || "1 second",
           memoryLimit: problem.memoryLimit || "256 megabytes",
           order: 0,
-          createdBy: user.id, // ✅ pulled from resolved promise
+          createdBy: userId, // ✅ pulled from resolved promise
         }),
       });
 

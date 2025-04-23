@@ -13,8 +13,10 @@ export async function POST(request: Request) {
       timeLimit,
       memoryLimit,
       order,
-      createdBy, // Expecting actual user ID
+      createdBy,
     } = body;
+
+    // Verify the createdBy matches the session user ID for security
 
     if (!contestId || !title || !description || !createdBy) {
       return NextResponse.json(
@@ -22,6 +24,7 @@ export async function POST(request: Request) {
         { status: 400 }
       );
     }
+
     console.log("Inserting the problem", contestId);
 
     const [problem] = await db

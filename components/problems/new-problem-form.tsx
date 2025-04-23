@@ -13,7 +13,13 @@ import TestCasesTab from "./test-cases-tab";
 import HintsConstraintsTab from "./hints-constraints-tab";
 import { useProblemForm } from "@/hooks/use-problem-form";
 
-export default function NewProblemForm({ contestId }: { contestId: string }) {
+export default function NewProblemForm({
+  contestId,
+  userId,
+}: {
+  contestId: string;
+  userId: string;
+}) {
   const router = useRouter();
   const [isLoading, setIsLoading] = useState(false);
   const [step, setStep] = useState<string>("details");
@@ -84,6 +90,7 @@ export default function NewProblemForm({ contestId }: { contestId: string }) {
             onNext={() => setStep("examples")}
             contestId={contestId}
             setProblemId={setProblemId}
+            userId={userId}
           />
         </TabsContent>
 
