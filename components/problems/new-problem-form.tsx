@@ -147,6 +147,7 @@ export default function NewProblemForm({
             onPrevious={() => setStep("testcases")}
             isLoading={isLoading}
             problemId={problemId}
+            contestId={contestId}
           />
         </TabsContent>
       </Tabs>

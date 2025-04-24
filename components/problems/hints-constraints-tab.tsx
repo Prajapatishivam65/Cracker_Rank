@@ -14,6 +14,7 @@ import {
 } from "@/components/ui/card";
 import { Trash } from "lucide-react";
 import { toast } from "sonner";
+import { useRouter } from "next/navigation";
 
 interface HintsConstraintsTabProps {
   constraints: string[];
@@ -27,6 +28,7 @@ interface HintsConstraintsTabProps {
   onPrevious: () => void;
   isLoading: boolean;
   problemId: string | null;
+  contestId: string | null;
   onSubmit?: () => void;
 }
 
@@ -42,10 +44,11 @@ export default function HintsConstraintsTab({
   onPrevious,
   isLoading,
   problemId,
+  contestId,
   onSubmit,
 }: HintsConstraintsTabProps) {
   const [isSaving, setIsSaving] = useState(false);
-
+  const router = useRouter();
   // Ensure we have at least one constraint and hint
   if (constraints.length === 0) {
     addConstraint();
@@ -55,69 +58,65 @@ export default function HintsConstraintsTab({
     addHint();
   }
 
-  const handleFormSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    console.log("Saving hints and constraints...");
-    console.log("Constraints:", constraints);
-    console.log("Hints:", hints);
+  const handleSaveHintsAndConstraints = async () => {
     if (!problemId) {
-      toast.error("Error", {
-        description: "Problem ID is required to save hints and constraints",
+      toast.error("Problem ID missing", {
+        description: "Please save the problem details first.",
       });
       return;
     }
 
+    console.log("Saving hints and constraints...");
+    console.log("Problem ID:", problemId);
+    console.log("Constraints:", constraints);
+    console.log("Hints:", hints);
+
     setIsSaving(true);
-    let hasError = false;
 
     try {
       // Save all non-empty constraints to the database
-      for (let i = 0; i < constraints.length; i++) {
-        const constraint = constraints[i].trim();
-        if (!constraint) continue; // Skip empty constraints
-
-        const response = await fetch("/api/constraints", {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({
-            problemId,
-            content: constraint,
-            order: i,
-          }),
+      console.log("Saving constraints");
+      const constraintPromises = constraints
+        .filter((constraint) => constraint.trim() !== "")
+        .map(async (constraint, index) => {
+          console.log(`Sending constraint ${index} to API:`, constraint);
+          return fetch("/api/constraints", {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({
+              problemId,
+              content: constraint,
+              order: index,
+            }),
+          });
         });
 
-        if (!response.ok) {
-          const errorData = await response.json();
-          throw new Error(
-            errorData.error || `Failed to save constraint ${i + 1}`
-          );
-        }
-      }
+      await Promise.all(constraintPromises);
+      console.log(`Saved ${constraintPromises.length} constraints`);
 
       // Save all non-empty hints to the database
-      for (let i = 0; i < hints.length; i++) {
-        const hint = hints[i].trim();
-        if (!hint) continue; // Skip empty hints
-
-        const response = await fetch("/api/hints", {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({
-            problemId,
-            content: hint,
-            order: i,
-          }),
+      console.log("Saving hints");
+      const hintPromises = hints
+        .filter((hint) => hint.trim() !== "")
+        .map(async (hint, index) => {
+          console.log(`Sending hint ${index} to API:`, hint);
+          return fetch("/api/hints", {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({
+              problemId,
+              content: hint,
+              order: index,
+            }),
+          });
         });
 
-        if (!response.ok) {
-          const errorData = await response.json();
-          throw new Error(errorData.error || `Failed to save hint ${i + 1}`);
-        }
-      }
+      await Promise.all(hintPromises);
+      console.log(`Saved ${hintPromises.length} hints`);
 
       toast.success("Success", {
         description: "Hints and constraints saved successfully",
@@ -125,11 +124,15 @@ export default function HintsConstraintsTab({
 
       // Call the onSubmit callback if provided
       if (onSubmit) {
+        console.log("Calling onSubmit callback...");
         onSubmit();
       }
+
+      // Optionally, you can redirect or perform other actions here
+      // For example, redirecting to the problem details page
+      router.push(`/admin/contests/${contestId}`);
     } catch (error) {
       console.error("Error saving hints or constraints:", error);
-      hasError = true;
       toast.error("Error", {
         description:
           error instanceof Error
@@ -142,78 +145,78 @@ export default function HintsConstraintsTab({
   };
 
   return (
-    <form onSubmit={handleFormSubmit}>
-      <Card>
-        <CardHeader>
-          <CardTitle>Hints & Constraints</CardTitle>
-          <CardDescription>
-            Add constraints and optional hints for the problem.
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-6">
-          {/* CONSTRAINTS */}
-          <div className="space-y-4">
-            <h3 className="text-lg font-medium">Constraints</h3>
-            {constraints.map((constraint, index) => (
-              <div key={index} className="flex items-center gap-2">
-                <Input
-                  value={constraint}
-                  placeholder="e.g., 1 ≤ N ≤ 10^5"
-                  onChange={(e) =>
-                    handleConstraintChange(index, e.target.value)
-                  }
-                />
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="icon"
-                  onClick={() => removeConstraint(index)}
-                  disabled={constraints.length <= 1}
-                >
-                  <Trash className="h-4 w-4" />
-                </Button>
-              </div>
-            ))}
-            <Button type="button" variant="outline" onClick={addConstraint}>
-              Add Constraint
-            </Button>
-          </div>
-          {/* HINTS */}
-          <div className="space-y-4">
-            <h3 className="text-lg font-medium">Hints (Optional)</h3>
-            {hints.map((hint, index) => (
-              <div key={index} className="flex items-center gap-2">
-                <Textarea
-                  rows={2}
-                  value={hint}
-                  placeholder="Add a helpful hint"
-                  onChange={(e) => handleHintChange(index, e.target.value)}
-                />
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="icon"
-                  onClick={() => removeHint(index)}
-                  disabled={hints.length <= 1}
-                >
-                  <Trash className="h-4 w-4" />
-                </Button>
-              </div>
-            ))}
-            <Button type="button" variant="outline" onClick={addHint}>
-              Add Hint
-            </Button>
-          </div>
-        </CardContent>
-        <CardFooter className="flex justify-between space-x-2">
-          <Button type="button" variant="outline" onClick={onPrevious}>
-            Previous: Test Cases
+    <Card>
+      <CardHeader>
+        <CardTitle>Hints & Constraints</CardTitle>
+        <CardDescription>
+          Add constraints and optional hints for the problem.
+        </CardDescription>
+      </CardHeader>
+      <CardContent className="space-y-6">
+        {/* CONSTRAINTS */}
+        <div className="space-y-4">
+          <h3 className="text-lg font-medium">Constraints</h3>
+          {constraints.map((constraint, index) => (
+            <div key={index} className="flex items-center gap-2">
+              <Input
+                value={constraint}
+                placeholder="e.g., 1 ≤ N ≤ 10^5"
+                onChange={(e) => handleConstraintChange(index, e.target.value)}
+              />
+              <Button
+                type="button"
+                variant="outline"
+                size="icon"
+                onClick={() => removeConstraint(index)}
+                disabled={constraints.length <= 1}
+              >
+                <Trash className="h-4 w-4" />
+              </Button>
+            </div>
+          ))}
+          <Button type="button" variant="outline" onClick={addConstraint}>
+            Add Constraint
           </Button>
-          <Button type="submit" disabled={isLoading || isSaving || !problemId}>
-            {isLoading || isSaving ? "Saving..." : "Create Problem"}
+        </div>
+        {/* HINTS */}
+        <div className="space-y-4">
+          <h3 className="text-lg font-medium">Hints (Optional)</h3>
+          {hints.map((hint, index) => (
+            <div key={index} className="flex items-center gap-2">
+              <Textarea
+                rows={2}
+                value={hint}
+                placeholder="Add a helpful hint"
+                onChange={(e) => handleHintChange(index, e.target.value)}
+              />
+              <Button
+                type="button"
+                variant="outline"
+                size="icon"
+                onClick={() => removeHint(index)}
+                disabled={hints.length <= 1}
+              >
+                <Trash className="h-4 w-4" />
+              </Button>
+            </div>
+          ))}
+          <Button type="button" variant="outline" onClick={addHint}>
+            Add Hint
           </Button>
-        </CardFooter>
-      </Card>
-    </form>
+        </div>
+      </CardContent>
+      <CardFooter className="flex justify-between space-x-2">
+        <Button type="button" variant="outline" onClick={onPrevious}>
+          Previous: Test Cases
+        </Button>
+        <Button
+          type="button"
+          onClick={handleSaveHintsAndConstraints}
+          disabled={isLoading || isSaving || !problemId}
+        >
+          {isLoading || isSaving ? "Saving..." : "Create Problem"}
+        </Button>
+      </CardFooter>
+    </Card>
   );
 }
