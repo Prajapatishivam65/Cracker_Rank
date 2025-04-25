@@ -82,10 +82,13 @@ type Problem = {
 
 const ContestViewPage = () => {
   const router = useRouter();
-  const params = useParams<{ tag: string; item: string }>();
-  // const contestId = params.item; // Get the contest ID from the URL
-  const contestId = "3e052d58-78da-4f70-9e4e-5b2c2cfde719";
-  // Todo params.contestId as string; // Uncomment this line to use dynamic contest ID from URL
+  const params = useParams();
+  // This returns a plain object with keys from the dynamic route
+  // const contestId = params?.item as string;
+  const contestId = params?.contestId as string;
+
+  // const contestId = "3e052d58-78da-4f70-9e4e-5b2c2cfde719";
+  // ** params.contestId as string; // Uncomment this line to use dynamic contest ID from URL
 
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);

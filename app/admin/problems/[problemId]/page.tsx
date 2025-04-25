@@ -13,12 +13,16 @@ import {
 } from "@/drizzle/schema";
 import { db } from "@/drizzle/db";
 
-export default async function ProblemAdminPage({
-  params,
-}: {
-  params: { id: string };
-}) {
-  const problemId = "d8674c0b-3e98-46c5-bd85-ef5e5ae3e45a"; // params.id; // todo remove this line when using dynamic routing
+interface PageProps {
+  params: {
+    problemId: string;
+  };
+}
+
+export default async function ProblemAdminPage({ params }: PageProps) {
+  const problemId = params.problemId; // Get the problem ID from the URL
+  // const problemId = "d8674c0b-3e98-46c5-bd85-ef5e5ae3e45a"; // params.id;
+  // ** remove this line when using dynamic routing
 
   // Get current user server-side
   const user = await getCurrentUser({ withFullUser: true });
