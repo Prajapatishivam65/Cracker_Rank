@@ -85,7 +85,6 @@ export default async function ProblemAdminPage({ params }: PageProps) {
       "# Python code here",
   };
 
-  // format
   // Format examples
   const formattedExamples = problemExamples.map((example) => ({
     input: example.input,
