@@ -12,6 +12,26 @@ import {
 import { eq } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 
+// Function to get problem details by ID
+export async function getProblemDetails(problemId: string) {
+  try {
+    const problemData = await db
+      .select()
+      .from(problems)
+      .where(eq(problems.id, problemId))
+      .limit(1);
+
+    if (!problemData || problemData.length === 0) {
+      return null;
+    }
+
+    return problemData[0];
+  } catch (error) {
+    console.error("Error fetching problem details:", error);
+    throw new Error("Failed to fetch problem details");
+  }
+}
+
 // Update problem details
 export async function updateProblemDetails(
   problemId: string,

@@ -9,7 +9,7 @@ import ExamplesTab from "./edit/examples-tab";
 import StarterCodeTab from "./edit/starter-code-tab";
 import TestCasesTab from "./edit/test-cases-tab";
 import HintsConstraintsTab from "./edit/hints-constraints-tab";
-import { useProblemForm } from "@/hooks/use-problem-form";
+import { useProblemForm } from "@/hooks//edit-problem-form";
 
 interface EditProblemFormProps {
   problem: {

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -15,7 +15,10 @@ import {
 } from "@/components/ui/card";
 import { toast } from "sonner";
 import type { Problem } from "@/hooks/use-problem-form";
-import { updateProblemDetails } from "@/actions/problem-actions";
+import {
+  updateProblemDetails,
+  getProblemDetails,
+} from "@/actions/problem-actions";
 
 interface DetailsTabProps {
   problem: Problem;
@@ -35,6 +38,39 @@ export default function DetailsTab({
   problemId,
 }: DetailsTabProps) {
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
+
+  // Fetch existing problem data when component mounts
+  useEffect(() => {
+    async function loadProblemData() {
+      setIsLoading(true);
+      try {
+        const existingProblem = await getProblemDetails(problemId);
+
+        if (existingProblem) {
+          // Update each field with the existing data
+          handleInputChange("title", existingProblem.title);
+          handleInputChange("description", existingProblem.description);
+          handleInputChange("difficulty", existingProblem.difficulty);
+          handleInputChange("timeLimit", existingProblem.timeLimit);
+          handleInputChange("memoryLimit", existingProblem.memoryLimit);
+        }
+      } catch (error) {
+        console.error("Failed to load existing problem data:", error);
+        toast.error("Failed to load problem data", {
+          description: "Please try refreshing the page.",
+        });
+      } finally {
+        setIsLoading(false);
+      }
+    }
+
+    if (problemId) {
+      loadProblemData();
+    } else {
+      setIsLoading(false);
+    }
+  }, [problemId, handleInputChange]);
 
   const handleUpdateDetails = async () => {
     if (!problem.title || !problem.description) {
@@ -73,6 +109,20 @@ export default function DetailsTab({
       setIsSubmitting(false);
     }
   };
+
+  if (isLoading) {
+    return (
+      <Card>
+        <CardHeader>
+          <CardTitle>Problem Details</CardTitle>
+          <CardDescription>Loading existing problem data...</CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4 flex justify-center items-center min-h-[300px]">
+          <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-primary"></div>
+        </CardContent>
+      </Card>
+    );
+  }
 
   return (
     <Card>
