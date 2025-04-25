@@ -20,7 +20,7 @@ interface PageProps {
 }
 
 export default async function ProblemAdminPage({ params }: PageProps) {
-  const problemId = params.problemId; // Get the problem ID from the URL
+  const { problemId } = await params; // Get the problem ID from the URL
   // const problemId = "d8674c0b-3e98-46c5-bd85-ef5e5ae3e45a"; // params.id;
   // ** remove this line when using dynamic routing
 
