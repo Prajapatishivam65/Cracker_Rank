@@ -50,7 +50,8 @@ export default async function ProblemAdminPage({ params }: PageProps) {
     redirect("/not-found");
   }
 
-  // Fetch all related data for the problem
+  // Fetch all related data for the
+  // problem
   const problemConstraints = await db.query.constraints.findMany({
     where: eq(constraints.problemId, problemId),
     orderBy: constraints.order,
