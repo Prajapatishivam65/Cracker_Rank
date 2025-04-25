@@ -30,12 +30,20 @@ import {
   Info,
   Award,
   Edit2,
+  BookOpen,
+  Code,
+  ExternalLink,
+  Plus,
 } from "lucide-react";
 import { format } from "date-fns";
 import { cn } from "@/lib/utils";
 import { eq } from "drizzle-orm"; // Import drizzle-orm operators for queries
 import { db } from "@/drizzle/db";
-import { contests, UserTable } from "@/drizzle/schema";
+import {
+  contests,
+  UserTable,
+  problems as problemsTable,
+} from "@/drizzle/schema";
 
 // Define the Contest type based on your schema
 type Contest = {
@@ -57,15 +65,33 @@ type Contest = {
   };
 };
 
+// Define the Problem type based on your schema
+type Problem = {
+  id: string;
+  contestId: string;
+  title: string;
+  description: string;
+  difficulty: "easy" | "medium" | "hard";
+  timeLimit: string;
+  memoryLimit: string;
+  createdBy: string;
+  createdAt: Date;
+  updatedAt: Date;
+  order: number;
+};
+
 const ContestViewPage = () => {
   const router = useRouter();
-  const params = useParams();
+  const params = useParams<{ tag: string; item: string }>();
+  // const contestId = params.item; // Get the contest ID from the URL
   const contestId = "3e052d58-78da-4f70-9e4e-5b2c2cfde719";
-  // todo params.contestId as string; // Uncomment this line to use dynamic contest ID from URL
+  // Todo params.contestId as string; // Uncomment this line to use dynamic contest ID from URL
 
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [contest, setContest] = useState<Contest | null>(null);
+  const [problems, setProblems] = useState<Problem[]>([]);
+  const [loadingProblems, setLoadingProblems] = useState(true);
 
   useEffect(() => {
     async function fetchContestDetails() {
@@ -108,8 +134,34 @@ const ContestViewPage = () => {
       }
     }
 
+    async function fetchProblems() {
+      try {
+        setLoadingProblems(true);
+
+        // Fetch problems for this contest
+        const problemsData = await db.query.problems.findMany({
+          where: eq(problemsTable.contestId, contestId),
+          orderBy: [problemsTable.order, problemsTable.title],
+        });
+
+        setProblems(
+          problemsData.map((problem) => ({
+            ...problem,
+            createdAt: new Date(problem.createdAt),
+            updatedAt: new Date(problem.updatedAt),
+          }))
+        );
+      } catch (err) {
+        console.error("Error fetching problems:", err);
+        // We don't set main error here to avoid blocking the whole page
+      } finally {
+        setLoadingProblems(false);
+      }
+    }
+
     if (contestId) {
       fetchContestDetails();
+      fetchProblems();
     }
   }, [contestId]);
 
@@ -142,6 +194,25 @@ const ContestViewPage = () => {
             </span>
           </Badge>
         );
+      default:
+        return (
+          <Badge className="bg-muted text-muted-foreground">Unknown</Badge>
+        );
+    }
+  };
+
+  const getDifficultyBadge = (difficulty: string) => {
+    switch (difficulty) {
+      case "easy":
+        return (
+          <Badge className="bg-green-100 text-green-700 border-0">Easy</Badge>
+        );
+      case "medium":
+        return (
+          <Badge className="bg-amber-100 text-amber-700 border-0">Medium</Badge>
+        );
+      case "hard":
+        return <Badge className="bg-red-100 text-red-700 border-0">Hard</Badge>;
       default:
         return (
           <Badge className="bg-muted text-muted-foreground">Unknown</Badge>
@@ -185,6 +256,10 @@ const ContestViewPage = () => {
   const handleDeleteConfirm = () => {
     // Implement delete functionality or show confirmation modal
     console.log("Delete button clicked for contest:", contestId);
+  };
+
+  const handleViewProblem = (problemId: string) => {
+    router.push(`/admin/problems/${problemId}`);
   };
 
   if (isLoading) {
@@ -270,8 +345,9 @@ const ContestViewPage = () => {
       </div>
 
       <Tabs defaultValue="overview" className="w-full">
-        <TabsList className="grid grid-cols-2 mb-6">
+        <TabsList className="grid grid-cols-3 mb-6">
           <TabsTrigger value="overview">Overview</TabsTrigger>
+          <TabsTrigger value="problems">Problems</TabsTrigger>
           <TabsTrigger value="configuration">Configuration</TabsTrigger>
         </TabsList>
 
@@ -390,9 +466,10 @@ const ContestViewPage = () => {
               <CardFooter className="flex justify-end gap-3 pt-2 border-t bg-muted/30">
                 <Button
                   variant="outline"
-                  className="text-whit hover:bg-primary/70 "
-                  // onClick={handleDeleteConfirm}
-                  // TOdo: Add edit  functionality of problems
+                  className="text-whit hover:bg-primary/70"
+                  onClick={() =>
+                    router.push(`/admin/contests/${contestId}/problems`)
+                  }
                 >
                   <Edit2 className="h-4 w-4 mr-2" />
                   Edit Problems
@@ -401,8 +478,8 @@ const ContestViewPage = () => {
                   onClick={handleAddProblems}
                   className="text-white hover:bg-primary/70"
                 >
-                  <Edit className="h-4 w-4 mr-2 text-white" />
-                  Add Probems
+                  <Plus className="h-4 w-4 mr-2 text-white" />
+                  Add Problems
                 </Button>
               </CardFooter>
             </Card>
@@ -450,6 +527,155 @@ const ContestViewPage = () => {
                   </div>
                 </div>
               </CardContent>
+            </Card>
+          </TabsContent>
+
+          <TabsContent value="problems" className="space-y-6">
+            <Card className="border shadow-md">
+              <CardHeader className="flex flex-row items-center justify-between">
+                <div>
+                  <CardTitle>Contest Problems</CardTitle>
+                  <CardDescription>
+                    All problems included in this contest
+                  </CardDescription>
+                </div>
+                <Button
+                  onClick={handleAddProblems}
+                  className="text-white hover:bg-primary/70"
+                >
+                  <Plus className="h-4 w-4 mr-2" />
+                  Add Problem
+                </Button>
+              </CardHeader>
+              <CardContent>
+                {loadingProblems ? (
+                  <div className="py-8 flex justify-center">
+                    <Loader2 className="h-8 w-8 animate-spin text-primary" />
+                  </div>
+                ) : problems.length === 0 ? (
+                  <div className="py-12 text-center">
+                    <BookOpen className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+                    <h3 className="text-lg font-medium mb-2">
+                      No problems added yet
+                    </h3>
+                    <p className="text-muted-foreground mb-6">
+                      This contest doesn't have any problems. Add problems to
+                      get started.
+                    </p>
+                    <Button
+                      onClick={handleAddProblems}
+                      className="text-white hover:bg-primary/70"
+                    >
+                      <Plus className="h-4 w-4 mr-2" />
+                      Add First Problem
+                    </Button>
+                  </div>
+                ) : (
+                  <div className="space-y-4">
+                    {problems.map((problem, index) => (
+                      <div
+                        key={problem.id}
+                        className="border rounded-lg p-4 hover:bg-muted/50 transition-colors"
+                      >
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-3">
+                            <div className="bg-primary/10 rounded-full h-8 w-8 flex items-center justify-center text-primary font-medium">
+                              {index + 1}
+                            </div>
+                            <div>
+                              <h3 className="font-medium text-lg">
+                                {problem.title}
+                              </h3>
+                              <div className="flex items-center gap-2 mt-1">
+                                {getDifficultyBadge(problem.difficulty)}
+                                <span className="text-xs text-muted-foreground flex items-center gap-1">
+                                  <Clock className="h-3 w-3" />
+                                  {problem.timeLimit}
+                                </span>
+                                <span className="text-xs text-muted-foreground">
+                                  {problem.memoryLimit}
+                                </span>
+                              </div>
+                            </div>
+                          </div>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="hover:bg-primary/10 flex items-center gap-1"
+                            onClick={() => handleViewProblem(problem.id)}
+                          >
+                            <ExternalLink className="h-4 w-4" />
+                            View
+                          </Button>
+                        </div>
+                        <div className="mt-3 pl-11">
+                          <p className="text-sm text-muted-foreground line-clamp-2">
+                            {problem.description.replace(/(<([^>]+)>)/gi, "")}
+                          </p>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+
+            <Card className="border shadow-md">
+              <CardHeader>
+                <CardTitle>Problem Management</CardTitle>
+                <CardDescription>
+                  Tools for organizing contest problems
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <div className="bg-muted/40 p-5 rounded-lg flex items-center gap-4">
+                    <div className="bg-blue-100 p-2 rounded-full">
+                      <Code className="h-6 w-6 text-blue-700" />
+                    </div>
+                    <div>
+                      <h3 className="font-medium">Problem Library</h3>
+                      <p className="text-sm text-muted-foreground">
+                        Create and manage all your coding problems
+                      </p>
+                      <Button
+                        variant="link"
+                        className="px-0 text-primary"
+                        onClick={() => router.push("/admin/problems")}
+                      >
+                        Go to Problem Library
+                      </Button>
+                    </div>
+                  </div>
+                  <div className="bg-muted/40 p-5 rounded-lg flex items-center gap-4">
+                    <div className="bg-amber-100 p-2 rounded-full">
+                      <BookOpen className="h-6 w-6 text-amber-700" />
+                    </div>
+                    <div>
+                      <h3 className="font-medium">Problem Sets</h3>
+                      <p className="text-sm text-muted-foreground">
+                        Group problems into reusable sets
+                      </p>
+                      <Button
+                        variant="link"
+                        className="px-0 text-primary"
+                        onClick={() => router.push("/admin/problem-sets")}
+                      >
+                        Manage Problem Sets
+                      </Button>
+                    </div>
+                  </div>
+                </div>
+              </CardContent>
+              <CardFooter className="flex justify-end gap-3 pt-2 border-t bg-muted/30">
+                <Button
+                  onClick={handleAddProblems}
+                  className="text-white hover:bg-primary/70"
+                >
+                  <Plus className="h-4 w-4 mr-2" />
+                  Add Problems
+                </Button>
+              </CardFooter>
             </Card>
           </TabsContent>
 
@@ -584,15 +810,52 @@ const ContestViewPage = () => {
                   </div>
 
                   <div className="space-y-2">
-                    <h3 className="font-medium">Total Duration</h3>
-                    <div className="bg-muted/40 p-4 rounded-md">
-                      <div className="flex items-center">
-                        <CalendarRange className="h-5 w-5 text-primary mr-3" />
-                        <p className="font-medium">
-                          {formatDuration(contest.startDate, contest.endDate)}
-                        </p>
-                      </div>
+                    <h3 className="font-medium">Contest Duration</h3>
+                    <div className="bg-muted/40 p-4 rounded-md flex items-center">
+                      <CalendarRange className="h-5 w-5 text-primary mr-3" />
+                      <p className="font-medium">
+                        {formatDuration(contest.startDate, contest.endDate)}
+                      </p>
                     </div>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card className="border shadow-md">
+              <CardHeader className="border-b">
+                <CardTitle className="text-destructive">Danger Zone</CardTitle>
+                <CardDescription>
+                  Irreversible actions for this contest
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="pt-6">
+                <div className="space-y-5">
+                  <div className="border border-destructive/20 rounded-lg p-4 bg-destructive/5 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                    <div>
+                      <h3 className="font-medium mb-1">Edit Contest</h3>
+                      <p className="text-sm text-muted-foreground">
+                        Modify contest settings, schedule, and access
+                        configuration
+                      </p>
+                    </div>
+                    <Button variant="outline" onClick={handleEditContest}>
+                      <Edit className="h-4 w-4 mr-2" />
+                      Edit Contest
+                    </Button>
+                  </div>
+
+                  <div className="border border-destructive/20 rounded-lg p-4 bg-destructive/5 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                    <div>
+                      <h3 className="font-medium mb-1">Delete Contest</h3>
+                      <p className="text-sm text-muted-foreground">
+                        Permanently remove this contest and all its data
+                      </p>
+                    </div>
+                    <Button variant="destructive" onClick={handleDeleteConfirm}>
+                      <Trash2 className="h-4 w-4 mr-2" />
+                      Delete Contest
+                    </Button>
                   </div>
                 </div>
               </CardContent>
@@ -600,24 +863,6 @@ const ContestViewPage = () => {
           </TabsContent>
         </div>
       </Tabs>
-
-      <div className="mt-8 flex justify-end gap-3">
-        <Button
-          variant="outline"
-          className="border-destructive text-destructive hover:bg-destructive/10"
-          onClick={handleDeleteConfirm}
-        >
-          <Trash2 className="h-4 w-4 mr-2" />
-          Delete Contest
-        </Button>
-        <Button
-          onClick={handleEditContest}
-          className="text-white hover:bg-primary/70"
-        >
-          <Edit className="h-4 w-4 mr-2" />
-          Edit Contest
-        </Button>
-      </div>
     </div>
   );
 };

@@ -18,7 +18,7 @@ export default async function ProblemAdminPage({
 }: {
   params: { id: string };
 }) {
-  const problemId = "123813f3-4176-4d36-9ffc-1b8a5717638b"; // params.id; // todo remove this line when using dynamic routing
+  const problemId = "d8674c0b-3e98-46c5-bd85-ef5e5ae3e45a"; // params.id; // todo remove this line when using dynamic routing
 
   // Get current user server-side
   const user = await getCurrentUser({ withFullUser: true });
