@@ -33,7 +33,21 @@ export type Problem = {
   hiddenTestCases: TestCase[];
 };
 
-export function useProblemForm() {
+export function useProblemForm(p0: {
+  initialData: {
+    title: string;
+    description: string;
+    difficulty: string;
+    timeLimit: string;
+    memoryLimit: string;
+    constraints: string[];
+    hints: string[];
+    examples: { input: string; output: string; explanation?: string }[];
+    testCases: { input: string[]; expectedOutput: string }[];
+    hiddenTestCases: { input: string[]; expectedOutput: string }[];
+    starterCode: { cpp: string; java: string; python: string };
+  };
+}) {
   // Initialize problem state with default empty values
   const [problem, setProblem] = useState<Problem>({
     title: "",
