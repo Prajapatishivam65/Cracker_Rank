@@ -18,7 +18,7 @@ export default async function HomePage() {
 
   return (
     <>
-      <Header />
+      {/* <Header /> */}
       <div className="container mx-auto p-4">
         {fullUser == null ? (
           <div className="flex gap-4">
