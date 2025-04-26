@@ -124,6 +124,7 @@ export default function StarterCodeTab({
           type="button"
           onClick={handleUpdateStarterCode}
           disabled={isSubmitting}
+          className="text-white"
         >
           {isSubmitting ? "Saving..." : "Save & Continue"}
         </Button>

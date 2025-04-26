@@ -24,7 +24,7 @@ interface DetailsTabProps {
   problem: Problem;
   handleInputChange: (field: keyof Problem, value: any) => void;
   onNext: () => void;
-  contestId: string;
+  contestId?: string;
   userId: string;
   problemId: string;
 }
@@ -196,6 +196,7 @@ export default function DetailsTab({
           type="button"
           onClick={handleUpdateDetails}
           disabled={isSubmitting}
+          className="text-white"
         >
           {isSubmitting ? "Saving..." : "Save & Continue"}
         </Button>

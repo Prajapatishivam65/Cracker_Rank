@@ -164,6 +164,7 @@ export default function ExamplesTab({
           type="button"
           onClick={handleUpdateExamples}
           disabled={isSubmitting}
+          className="text-white"
         >
           {isSubmitting ? "Saving..." : "Save & Continue"}
         </Button>

@@ -32,8 +32,8 @@ interface HintsConstraintsTabProps {
   onPrevious: () => void;
   isLoading: boolean;
   problemId: string;
-  contestId: string;
-  onSubmit?: () => void;
+  contestId?: string;
+  onSubmit: () => Promise<void>;
 }
 
 export default function HintsConstraintsTab({
@@ -200,6 +200,7 @@ export default function HintsConstraintsTab({
         </Button>
         <Button
           type="button"
+          className="text-white"
           onClick={handleUpdateHintsAndConstraints}
           disabled={isLoading || isSaving || !problemId}
         >

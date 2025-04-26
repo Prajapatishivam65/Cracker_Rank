@@ -230,15 +230,9 @@ export default function ProblemAdminView({
 
         <div className="flex gap-3">
           <Link href={`/admin/problems/${problem.id}/edit`}>
-            <Button variant="outline">
+            <Button variant="outline" className="text-white">
               <Pencil className="mr-2 h-4 w-4" />
               Edit Problem
-            </Button>
-          </Link>
-          <Link href={`/admin/problems/${problem.id}`}>
-            <Button variant="default">
-              <Eye className="mr-2 h-4 w-4" />
-              User View
             </Button>
           </Link>
         </div>

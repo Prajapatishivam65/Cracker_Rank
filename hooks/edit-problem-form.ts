@@ -1,8 +1,5 @@
-"use client";
+import { useState, useCallback, useMemo } from "react";
 
-import { useState } from "react";
-
-// Define types based on your schema structure
 export type Example = {
   input: string;
   output: string;
@@ -33,7 +30,7 @@ export type Problem = {
   hiddenTestCases: TestCase[];
 };
 
-export function useProblemForm(p0: {
+export function useProblemForm(props: {
   initialData: {
     title: string;
     description: string;
@@ -48,224 +45,213 @@ export function useProblemForm(p0: {
     starterCode: { cpp: string; java: string; python: string };
   };
 }) {
-  // Initialize problem state with the initialData provided
-  const [problem, setProblem] = useState<Problem>({
-    title: p0.initialData.title || "",
-    description: p0.initialData.description || "",
+  // Use lazy initialization for complex state
+  const [problem, setProblem] = useState<Problem>(() => ({
+    title: props.initialData.title || "",
+    description: props.initialData.description || "",
     difficulty:
-      (p0.initialData.difficulty as "Easy" | "Medium" | "Hard") || "Medium",
-    timeLimit: p0.initialData.timeLimit || "1 second",
-    memoryLimit: p0.initialData.memoryLimit || "256 megabytes",
+      (props.initialData.difficulty as "Easy" | "Medium" | "Hard") || "Medium",
+    timeLimit: props.initialData.timeLimit || "1 second",
+    memoryLimit: props.initialData.memoryLimit || "256 megabytes",
     constraints:
-      p0.initialData.constraints && p0.initialData.constraints.length > 0
-        ? p0.initialData.constraints
+      props.initialData.constraints?.length > 0
+        ? props.initialData.constraints
         : [""],
     examples:
-      p0.initialData.examples && p0.initialData.examples.length > 0
-        ? p0.initialData.examples
+      props.initialData.examples?.length > 0
+        ? props.initialData.examples
         : [{ input: "", output: "", explanation: "" }],
-    hints:
-      p0.initialData.hints && p0.initialData.hints.length > 0
-        ? p0.initialData.hints
-        : [""],
+    hints: props.initialData.hints?.length > 0 ? props.initialData.hints : [""],
     starterCode: {
-      cpp: p0.initialData.starterCode?.cpp || "",
-      java: p0.initialData.starterCode?.java || "",
-      python: p0.initialData.starterCode?.python || "",
+      cpp: props.initialData.starterCode?.cpp || "",
+      java: props.initialData.starterCode?.java || "",
+      python: props.initialData.starterCode?.python || "",
     },
     testCases:
-      p0.initialData.testCases && p0.initialData.testCases.length > 0
-        ? p0.initialData.testCases
+      props.initialData.testCases?.length > 0
+        ? props.initialData.testCases
         : [{ input: [""], expectedOutput: "" }],
     hiddenTestCases:
-      p0.initialData.hiddenTestCases &&
-      p0.initialData.hiddenTestCases.length > 0
-        ? p0.initialData.hiddenTestCases
+      props.initialData.hiddenTestCases?.length > 0
+        ? props.initialData.hiddenTestCases
         : [{ input: [""], expectedOutput: "" }],
-  });
+  }));
 
-  // Helper functions for updating arrays
-  const updateArray = (array: any[], index: number, value: any) => {
-    const newArray = [...array];
-    newArray[index] = value;
-    return newArray;
-  };
-
-  // Update handlers
-  const handleInputChange = (field: keyof Problem, value: any) => {
+  // Memoize update functions
+  const handleInputChange = useCallback((field: keyof Problem, value: any) => {
     setProblem((prev) => ({ ...prev, [field]: value }));
-  };
+  }, []);
 
-  const handleConstraintChange = (index: number, value: string) => {
-    setProblem((prev) => ({
-      ...prev,
-      constraints: updateArray(prev.constraints, index, value),
-    }));
-  };
-
-  const handleHintChange = (index: number, value: string) => {
-    setProblem((prev) => ({
-      ...prev,
-      hints: updateArray(prev.hints, index, value),
-    }));
-  };
-
-  const handleExampleChange = (
-    index: number,
-    field: keyof Example,
-    value: string
-  ) => {
-    setProblem((prev) => ({
-      ...prev,
-      examples: updateArray(prev.examples, index, {
-        ...prev.examples[index],
-        [field]: value,
-      }),
-    }));
-  };
-
-  const handleStarterCodeChange = (language: string, code: string) => {
-    setProblem((prev) => ({
-      ...prev,
-      starterCode: { ...prev.starterCode, [language]: code },
-    }));
-  };
-
-  const handleTestCaseChange = (
-    type: "testCases" | "hiddenTestCases",
-    index: number,
-    field: "input" | "expectedOutput",
-    value: string | string[]
-  ) => {
-    setProblem((prev) => ({
-      ...prev,
-      [type]: updateArray(prev[type], index, {
-        ...prev[type][index],
-        [field]: value,
-      }),
-    }));
-  };
-
-  // Function to handle test case input lines
-  const handleTestCaseInputChange = (
-    type: "testCases" | "hiddenTestCases",
-    testCaseIndex: number,
-    lineIndex: number,
-    value: string
-  ) => {
+  const handleConstraintChange = useCallback((index: number, value: string) => {
     setProblem((prev) => {
-      const testCase = prev[type][testCaseIndex];
-      const newInput = [...testCase.input];
-      newInput[lineIndex] = value;
-
-      return {
-        ...prev,
-        [type]: updateArray(prev[type], testCaseIndex, {
-          ...testCase,
-          input: newInput,
-        }),
-      };
+      const newConstraints = [...prev.constraints];
+      newConstraints[index] = value;
+      return { ...prev, constraints: newConstraints };
     });
-  };
+  }, []);
 
-  // Add/remove line in test case input
-  const addTestCaseInputLine = (
-    type: "testCases" | "hiddenTestCases",
-    testCaseIndex: number
-  ) => {
+  const handleHintChange = useCallback((index: number, value: string) => {
     setProblem((prev) => {
-      const testCase = prev[type][testCaseIndex];
-      return {
+      const newHints = [...prev.hints];
+      newHints[index] = value;
+      return { ...prev, hints: newHints };
+    });
+  }, []);
+
+  const handleExampleChange = useCallback(
+    (index: number, field: keyof Example, value: string) => {
+      setProblem((prev) => {
+        const newExamples = [...prev.examples];
+        newExamples[index] = { ...newExamples[index], [field]: value };
+        return { ...prev, examples: newExamples };
+      });
+    },
+    []
+  );
+
+  const handleStarterCodeChange = useCallback(
+    (language: string, code: string) => {
+      setProblem((prev) => ({
         ...prev,
-        [type]: updateArray(prev[type], testCaseIndex, {
+        starterCode: { ...prev.starterCode, [language]: code },
+      }));
+    },
+    []
+  );
+
+  const handleTestCaseChange = useCallback(
+    (
+      type: "testCases" | "hiddenTestCases",
+      index: number,
+      field: "input" | "expectedOutput",
+      value: string | string[]
+    ) => {
+      setProblem((prev) => {
+        const newTestCases = [...prev[type]];
+        newTestCases[index] = { ...newTestCases[index], [field]: value };
+        return { ...prev, [type]: newTestCases };
+      });
+    },
+    []
+  );
+
+  const handleTestCaseInputChange = useCallback(
+    (
+      type: "testCases" | "hiddenTestCases",
+      testCaseIndex: number,
+      lineIndex: number,
+      value: string
+    ) => {
+      setProblem((prev) => {
+        const newTestCases = [...prev[type]];
+        const newInputs = [...newTestCases[testCaseIndex].input];
+        newInputs[lineIndex] = value;
+        newTestCases[testCaseIndex] = {
+          ...newTestCases[testCaseIndex],
+          input: newInputs,
+        };
+        return { ...prev, [type]: newTestCases };
+      });
+    },
+    []
+  );
+
+  const addTestCaseInputLine = useCallback(
+    (type: "testCases" | "hiddenTestCases", testCaseIndex: number) => {
+      setProblem((prev) => {
+        const newTestCases = [...prev[type]];
+        const testCase = newTestCases[testCaseIndex];
+        newTestCases[testCaseIndex] = {
           ...testCase,
           input: [...testCase.input, ""],
-        }),
-      };
-    });
-  };
+        };
+        return { ...prev, [type]: newTestCases };
+      });
+    },
+    []
+  );
 
-  const removeTestCaseInputLine = (
-    type: "testCases" | "hiddenTestCases",
-    testCaseIndex: number,
-    lineIndex: number
-  ) => {
-    setProblem((prev) => {
-      const testCase = prev[type][testCaseIndex];
-      const newInput = testCase.input.filter((_, i) => i !== lineIndex);
-      return {
-        ...prev,
-        [type]: updateArray(prev[type], testCaseIndex, {
+  const removeTestCaseInputLine = useCallback(
+    (
+      type: "testCases" | "hiddenTestCases",
+      testCaseIndex: number,
+      lineIndex: number
+    ) => {
+      setProblem((prev) => {
+        const newTestCases = [...prev[type]];
+        const testCase = newTestCases[testCaseIndex];
+        newTestCases[testCaseIndex] = {
           ...testCase,
-          input: newInput,
-        }),
-      };
-    });
-  };
+          input: testCase.input.filter((_, i) => i !== lineIndex),
+        };
+        return { ...prev, [type]: newTestCases };
+      });
+    },
+    []
+  );
 
-  // Add/remove functions
-  const addConstraint = () => {
+  const addConstraint = useCallback(() => {
     setProblem((prev) => ({
       ...prev,
       constraints: [...prev.constraints, ""],
     }));
-  };
+  }, []);
 
-  const removeConstraint = (index: number) => {
+  const removeConstraint = useCallback((index: number) => {
     setProblem((prev) => ({
       ...prev,
       constraints: prev.constraints.filter((_, i) => i !== index),
     }));
-  };
+  }, []);
 
-  const addHint = () => {
+  const addHint = useCallback(() => {
     setProblem((prev) => ({
       ...prev,
       hints: [...prev.hints, ""],
     }));
-  };
+  }, []);
 
-  const removeHint = (index: number) => {
+  const removeHint = useCallback((index: number) => {
     setProblem((prev) => ({
       ...prev,
       hints: prev.hints.filter((_, i) => i !== index),
     }));
-  };
+  }, []);
 
-  const addExample = () => {
+  const addExample = useCallback(() => {
     setProblem((prev) => ({
       ...prev,
       examples: [...prev.examples, { input: "", output: "", explanation: "" }],
     }));
-  };
+  }, []);
 
-  const removeExample = (index: number) => {
+  const removeExample = useCallback((index: number) => {
     setProblem((prev) => ({
       ...prev,
       examples: prev.examples.filter((_, i) => i !== index),
     }));
-  };
+  }, []);
 
-  const addTestCase = (type: "testCases" | "hiddenTestCases") => {
+  const addTestCase = useCallback((type: "testCases" | "hiddenTestCases") => {
     setProblem((prev) => ({
       ...prev,
       [type]: [...prev[type], { input: [""], expectedOutput: "" }],
     }));
-  };
+  }, []);
 
-  const removeTestCase = (
-    type: "testCases" | "hiddenTestCases",
-    index: number
-  ) => {
-    setProblem((prev) => ({
-      ...prev,
-      [type]: prev[type].filter((_, i) => i !== index),
-    }));
-  };
+  const removeTestCase = useCallback(
+    (type: "testCases" | "hiddenTestCases", index: number) => {
+      setProblem((prev) => ({
+        ...prev,
+        [type]: prev[type].filter((_, i) => i !== index),
+      }));
+    },
+    []
+  );
 
-  return {
-    problem,
-    handlers: {
+  // Memoize handlers object to prevent unnecessary re-renders in child components
+  const handlers = useMemo(
+    () => ({
       handleInputChange,
       handleConstraintChange,
       handleHintChange,
@@ -283,6 +269,30 @@ export function useProblemForm(p0: {
       removeExample,
       addTestCase,
       removeTestCase,
-    },
+    }),
+    [
+      handleInputChange,
+      handleConstraintChange,
+      handleHintChange,
+      handleExampleChange,
+      handleStarterCodeChange,
+      handleTestCaseChange,
+      handleTestCaseInputChange,
+      addTestCaseInputLine,
+      removeTestCaseInputLine,
+      addConstraint,
+      removeConstraint,
+      addHint,
+      removeHint,
+      addExample,
+      removeExample,
+      addTestCase,
+      removeTestCase,
+    ]
+  );
+
+  return {
+    problem,
+    handlers,
   };
 }

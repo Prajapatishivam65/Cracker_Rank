@@ -155,6 +155,7 @@ export default function TestCasesTab({
                     onClick={() =>
                       handlers.removeTestCase("testCases", tcIndex)
                     }
+                    className="text-red-500"
                   >
                     <Trash className="h-4 w-4 mr-1" /> Remove
                   </Button>
@@ -346,6 +347,7 @@ export default function TestCasesTab({
           type="button"
           onClick={handleUpdateTestCases}
           disabled={isSubmitting}
+          className="text-white"
         >
           {isSubmitting ? "Saving..." : "Save & Continue"}
         </Button>
