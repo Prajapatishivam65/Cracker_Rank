@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { CalendarIcon, Clock, Trophy, Users } from "lucide-react";
 import {
@@ -33,6 +33,7 @@ export default function UserContestsPage() {
     {}
   );
   const [progress, setProgress] = useState<Record<string, number>>({});
+  const [securityCode, setSecurityCode] = useState("");
   const router = useRouter();
 
   // State for security code modal
@@ -41,80 +42,114 @@ export default function UserContestsPage() {
     null
   );
 
-  useEffect(() => {
-    const fetchContests = async () => {
-      try {
-        // Using fetch for the initial contests list
-        const response = await fetch("/api/contests");
-        if (!response.ok) throw new Error("Failed to fetch contests");
-        const data = await response.json();
-        setContests(data);
+  // Use ref to track if component is mounted
+  const isMountedRef = useRef(true);
 
-        // Calculate status, time remaining, and progress for each contest
-        const statusMap: Record<string, string> = {};
-        const timeMap: Record<string, string> = {};
-        const progressMap: Record<string, number> = {};
+  // Function to update contest metadata (status, time, progress)
+  const updateContestMetadata = useCallback(async (contestList: Contest[]) => {
+    if (contestList.length === 0) return;
 
-        for (const contest of data) {
-          const status = await getContestStatus(contest);
-          statusMap[contest.id] = status;
+    try {
+      const statusMap: Record<string, string> = {};
+      const timeMap: Record<string, string> = {};
+      const progressMap: Record<string, number> = {};
 
-          const time = await getTimeRemaining(contest);
-          timeMap[contest.id] = time;
+      // Process all contests in parallel
+      await Promise.all(
+        contestList.map(async (contest) => {
+          try {
+            const [status, time, prog] = await Promise.all([
+              getContestStatus(contest),
+              getTimeRemaining(contest),
+              getContestProgress(contest),
+            ]);
 
-          const prog = await getContestProgress(contest);
-          progressMap[contest.id] = prog;
-        }
+            statusMap[contest.id] = status;
+            timeMap[contest.id] = time;
+            progressMap[contest.id] = prog;
+          } catch (error) {
+            console.error(`Error processing contest ${contest.id}:`, error);
+            // Set fallback values
+            statusMap[contest.id] = contest.status;
+            timeMap[contest.id] = "";
+            progressMap[contest.id] = 0;
+          }
+        })
+      );
 
+      // Only update state if component is still mounted
+      if (isMountedRef.current) {
         setContestStatuses(statusMap);
         setTimeRemaining(timeMap);
         setProgress(progressMap);
+      }
+    } catch (error) {
+      console.error("Error updating contest metadata:", error);
+    }
+  }, []);
+
+  // Initial data fetch
+  useEffect(() => {
+    const fetchContests = async () => {
+      try {
+        const response = await fetch("/api/contests");
+        if (!response.ok) throw new Error("Failed to fetch contests");
+        const data = await response.json();
+
+        if (isMountedRef.current) {
+          setContests(data);
+          // Update metadata for fetched contests
+          await updateContestMetadata(data);
+        }
       } catch (error) {
         console.error("Error fetching contests:", error);
       } finally {
-        setLoading(false);
+        if (isMountedRef.current) {
+          setLoading(false);
+        }
       }
     };
 
     fetchContests();
+  }, []); // Empty dependency array - only run once on mount
 
-    // Set up interval to update time remaining
-    const interval = setInterval(async () => {
-      if (contests.length === 0) return;
+  // Set up interval for periodic updates
+  useEffect(() => {
+    if (contests.length === 0) return;
 
-      const timeMap: Record<string, string> = {};
-      const progressMap: Record<string, number> = {};
-
-      for (const contest of contests) {
-        const time = await getTimeRemaining(contest);
-        timeMap[contest.id] = time;
-
-        const prog = await getContestProgress(contest);
-        progressMap[contest.id] = prog;
-      }
-
-      setTimeRemaining(timeMap);
-      setProgress(progressMap);
+    const interval = setInterval(() => {
+      updateContestMetadata(contests);
     }, 60000); // Update every minute
 
     return () => clearInterval(interval);
-  }, [contests.length]);
+  }, [contests, updateContestMetadata]); // Depend on contests and the memoized callback
+
+  // Cleanup on unmount
+  useEffect(() => {
+    return () => {
+      isMountedRef.current = false;
+    };
+  }, []);
 
   // Function to handle contest access
   const handleContestAccess = (contest: Contest) => {
     const contestStatus = contestStatuses[contest.id] || contest.status;
 
-    // If contest is in draft mode, don't allow access
+    setSecurityCode(contest.securityCode || "");
+
+    if (contestStatus === "ended") {
+      router.push(`/user/contests/${contest.id}`);
+      return;
+    }
+
     if (contestStatus === "draft") {
       return;
     }
 
-    // If contest is private, open security code modal
     if (!contest.isPublic) {
       setSelectedContestId(contest.id);
       setSecurityModalOpen(true);
     } else {
-      // If contest is public, redirect directly
       router.push(`/user/contests/${contest.id}`);
     }
   };
@@ -305,6 +340,11 @@ export default function UserContestsPage() {
           onClose={() => {
             setSecurityModalOpen(false);
             setSelectedContestId(null);
+          }}
+          securityContestCode={securityCode}
+          onSuccess={() => {
+            setSecurityModalOpen(false);
+            router.push(`/user/contests/${selectedContestId}`);
           }}
         />
       )}

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { ArrowLeft, Clock, Code, FileText, Timer } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
@@ -25,51 +25,91 @@ export default function ContestProblemsPage() {
   const [timeRemaining, setTimeRemaining] = useState<string>("");
   const [progress, setProgress] = useState<number>(0);
   const router = useRouter();
-  //   const contestId = params.contestId;
   const contestId = "3e052d58-78da-4f70-9e4e-5b2c2cfde719";
 
+  // Use ref to store the latest contest data for interval
+  const contestRef = useRef<Contest | null>(null);
+  const intervalRef = useRef<NodeJS.Timeout | null>(null);
+
+  // Update contest ref whenever contest changes
   useEffect(() => {
-    // Fetch contest details and problems using server actions
+    contestRef.current = contest;
+  }, [contest]);
+
+  // Function to update time remaining and progress
+  const updateTimeAndProgress = useCallback(async () => {
+    const currentContest = contestRef.current;
+    if (!currentContest) return;
+
+    try {
+      const [updatedTimeRemaining, updatedProgress] = await Promise.all([
+        getTimeRemaining(currentContest),
+        getContestProgress(currentContest),
+      ]);
+
+      setTimeRemaining(updatedTimeRemaining);
+      setProgress(updatedProgress);
+    } catch (error) {
+      console.error("Error updating time and progress:", error);
+    }
+  }, []);
+
+  // Initial data fetch
+  useEffect(() => {
     const fetchContestAndProblems = async () => {
       try {
-        // Fetch contest details using server action
-        const contestData = await getContestById(contestId);
+        setLoading(true);
+
+        // Fetch contest and problems in parallel
+        const [contestData, problemsData] = await Promise.all([
+          getContestById(contestId),
+          getContestProblems(contestId),
+        ]);
+
         setContest(contestData);
+        setProblems(problemsData);
 
+        // If contest exists, fetch initial time and progress
         if (contestData) {
-          // Fetch time remaining and progress
-          const timeRemainingData = await getTimeRemaining(contestData);
-          setTimeRemaining(timeRemainingData);
+          const [timeRemainingData, progressData] = await Promise.all([
+            getTimeRemaining(contestData),
+            getContestProgress(contestData),
+          ]);
 
-          const progressData = await getContestProgress(contestData);
+          setTimeRemaining(timeRemainingData);
           setProgress(progressData);
         }
-
-        // Fetch problems for this contest using server action
-        const problemsData = await getContestProblems(contestId);
-        setProblems(problemsData);
       } catch (error) {
-        console.error("Error fetching data:", error);
+        console.error("Error fetching contest data:", error);
       } finally {
         setLoading(false);
       }
     };
 
     fetchContestAndProblems();
+  }, [contestId]);
 
-    // Set up interval to update time remaining
-    const intervalId = setInterval(async () => {
-      if (contest) {
-        const updatedTimeRemaining = await getTimeRemaining(contest);
-        setTimeRemaining(updatedTimeRemaining);
+  // Separate effect for interval management
+  useEffect(() => {
+    // Clear any existing interval
+    if (intervalRef.current) {
+      clearInterval(intervalRef.current);
+      intervalRef.current = null;
+    }
 
-        const updatedProgress = await getContestProgress(contest);
-        setProgress(updatedProgress);
+    // Only set up interval if contest exists and is active
+    if (contest && contest.status === "active") {
+      intervalRef.current = setInterval(updateTimeAndProgress, 60000); // Update every minute
+    }
+
+    // Cleanup function
+    return () => {
+      if (intervalRef.current) {
+        clearInterval(intervalRef.current);
+        intervalRef.current = null;
       }
-    }, 60000); // Update every minute
-
-    return () => clearInterval(intervalId);
-  }, [contestId, contest]);
+    };
+  }, [contest, updateTimeAndProgress]);
 
   // Function to get badge color based on difficulty
   const getDifficultyColor = (difficulty: string) => {
@@ -190,11 +230,9 @@ export default function ContestProblemsPage() {
                       </div>
                       <Button
                         onClick={() =>
-                          router.push(
-                            `/user/contests/${contestId}/problems/${problem.id}`
-                          )
+                          router.push(`/user/contests/problems/${problem.id}`)
                         }
-                        className="md:self-center"
+                        className="md:self-center text-white"
                       >
                         Solve Problem
                       </Button>

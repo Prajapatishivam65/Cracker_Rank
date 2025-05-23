@@ -18,13 +18,17 @@ import { useRouter } from "next/navigation";
 type SecurityCodeModalProps = {
   isOpen: boolean;
   contestId: string;
+  securityContestCode: string; // Made non-optional
   onClose: () => void;
+  onSuccess: () => void;
 };
 
 export function SecurityCodeModal({
   isOpen,
   contestId,
+  securityContestCode,
   onClose,
+  onSuccess,
 }: SecurityCodeModalProps) {
   const [securityCode, setSecurityCode] = useState("");
   const [error, setError] = useState("");
@@ -33,8 +37,21 @@ export function SecurityCodeModal({
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setError("");
     setIsSubmitting(true);
+    setError("");
+
+    try {
+      if (securityCode.trim() === securityContestCode) {
+        onSuccess();
+        router.push(`/user/contests/${contestId}`);
+      } else {
+        setError("Invalid security code. Please try again.");
+      }
+    } catch (error) {
+      setError("An error occurred. Please try again.");
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   return (
