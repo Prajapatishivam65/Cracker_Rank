@@ -33,53 +33,53 @@ export type Problem = {
   hiddenTestCases: TestCase[];
 };
 
-export function useProblemForm(p0: {
-  initialData: {
-    title: string;
-    description: string;
-    difficulty: string;
-    timeLimit: string;
-    memoryLimit: string;
-    constraints: string[];
-    hints: string[];
-    examples: { input: string; output: string; explanation?: string }[];
-    testCases: { input: string[]; expectedOutput: string }[];
-    hiddenTestCases: { input: string[]; expectedOutput: string }[];
-    starterCode: { cpp: string; java: string; python: string };
+export function useProblemForm(p0?: {
+  initialData?: {
+    title?: string;
+    description?: string;
+    difficulty?: string;
+    timeLimit?: string;
+    memoryLimit?: string;
+    constraints?: string[];
+    hints?: string[];
+    examples?: { input: string; output: string; explanation?: string }[];
+    testCases?: { input: string[]; expectedOutput: string }[];
+    hiddenTestCases?: { input: string[]; expectedOutput: string }[];
+    starterCode?: { cpp?: string; java?: string; python?: string };
   };
 }) {
-  // Initialize problem state with the initialData provided
+  // Initialize problem state with the initialData provided or default values
   const [problem, setProblem] = useState<Problem>({
-    title: p0.initialData.title || "",
-    description: p0.initialData.description || "",
+    title: p0?.initialData?.title || "",
+    description: p0?.initialData?.description || "",
     difficulty:
-      (p0.initialData.difficulty as "Easy" | "Medium" | "Hard") || "Medium",
-    timeLimit: p0.initialData.timeLimit || "1 second",
-    memoryLimit: p0.initialData.memoryLimit || "256 megabytes",
+      (p0?.initialData?.difficulty as "Easy" | "Medium" | "Hard") || "Medium",
+    timeLimit: p0?.initialData?.timeLimit || "1 second",
+    memoryLimit: p0?.initialData?.memoryLimit || "256 megabytes",
     constraints:
-      p0.initialData.constraints && p0.initialData.constraints.length > 0
+      p0?.initialData?.constraints && p0?.initialData?.constraints.length > 0
         ? p0.initialData.constraints
         : [""],
     examples:
-      p0.initialData.examples && p0.initialData.examples.length > 0
+      p0?.initialData?.examples && p0?.initialData?.examples.length > 0
         ? p0.initialData.examples
         : [{ input: "", output: "", explanation: "" }],
     hints:
-      p0.initialData.hints && p0.initialData.hints.length > 0
+      p0?.initialData?.hints && p0?.initialData?.hints.length > 0
         ? p0.initialData.hints
         : [""],
     starterCode: {
-      cpp: p0.initialData.starterCode?.cpp || "",
-      java: p0.initialData.starterCode?.java || "",
-      python: p0.initialData.starterCode?.python || "",
+      cpp: p0?.initialData?.starterCode?.cpp || "",
+      java: p0?.initialData?.starterCode?.java || "",
+      python: p0?.initialData?.starterCode?.python || "",
     },
     testCases:
-      p0.initialData.testCases && p0.initialData.testCases.length > 0
+      p0?.initialData?.testCases && p0?.initialData?.testCases.length > 0
         ? p0.initialData.testCases
         : [{ input: [""], expectedOutput: "" }],
     hiddenTestCases:
-      p0.initialData.hiddenTestCases &&
-      p0.initialData.hiddenTestCases.length > 0
+      p0?.initialData?.hiddenTestCases &&
+      p0?.initialData?.hiddenTestCases.length > 0
         ? p0.initialData.hiddenTestCases
         : [{ input: [""], expectedOutput: "" }],
   });
