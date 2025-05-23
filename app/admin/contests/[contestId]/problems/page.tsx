@@ -1,9 +1,16 @@
 import { getCurrentUser } from "@/auth/currentUser";
 import NewProblemForm from "@/components/problems/new-problem-form";
 import { redirect } from "next/navigation";
+import { useParams } from "next/navigation";
 
-export default async function NewProblemPage() {
-  const contestId = "3e052d58-78da-4f70-9e4e-5b2c2cfde719"; // Todo Placeholder, replace with actual logic to get contestId
+interface PageProps {
+  params: {
+    contestId: string;
+  };
+}
+export default async function NewProblemPage({ params }: PageProps) {
+  const contestId = params.contestId;
+  // ** Access the contestId from params
 
   // Get current user server-side
   const user = await getCurrentUser({ withFullUser: true });
