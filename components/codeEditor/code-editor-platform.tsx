@@ -346,6 +346,12 @@ int main() {
     setResults(null);
     setActiveTab("results");
 
+    console.log("Running code...");
+    console.log("Code:", code);
+    console.log("Language:", language);
+    console.log("Test Cases:", currentProblem.testCases);
+    console.log("Hidden Test Cases:", currentProblem.hiddenTestCases);
+
     try {
       const executionResults = await executeCode(
         code,

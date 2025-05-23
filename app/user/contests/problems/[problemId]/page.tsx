@@ -148,7 +148,7 @@ export default async function ProblemAdminPage({ params }: PageProps) {
 
   // Log the formatted problem data
   console.log("=== FORMATTED PROBLEM DATA ===");
-  console.log(JSON.stringify(formattedProblem, null, 2));
+  // console.log(JSON.stringify(formattedProblem, null, 2));
   console.log("=== END FORMATTED PROBLEM DATA ===");
 
   // Create the problem data object for the admin view (keeping your original structure)
@@ -179,21 +179,62 @@ export default async function ProblemAdminPage({ params }: PageProps) {
     },
     testCases: problemTestCases
       .filter((tc) => !tc.isHidden)
-      .map((tc) => ({
-        input: tc.inputLines,
-        expectedOutput: tc.expectedOutput,
-      })),
+      .map((tc) => {
+        let input;
+        // Check if inputLines length is 1 and if first element is a JSON string representing an array
+        if (
+          tc.inputLines.length === 1 &&
+          tc.inputLines[0].startsWith("[") &&
+          tc.inputLines[0].endsWith("]")
+        ) {
+          try {
+            input = JSON.parse(tc.inputLines[0]);
+          } catch {
+            input = tc.inputLines; // fallback to original if JSON parse fails
+          }
+        } else {
+          input = tc.inputLines;
+        }
+
+        return {
+          input,
+          expectedOutput: tc.expectedOutput,
+        };
+      }),
+
     hiddenTestCases: problemTestCases
       .filter((tc) => tc.isHidden)
-      .map((tc) => ({
-        input: tc.inputLines,
-        expectedOutput: tc.expectedOutput,
-      })),
+      .map((tc) => {
+        let input;
+        if (
+          tc.inputLines.length === 1 &&
+          tc.inputLines[0].startsWith("[") &&
+          tc.inputLines[0].endsWith("]")
+        ) {
+          try {
+            input = JSON.parse(tc.inputLines[0]);
+          } catch {
+            input = tc.inputLines;
+          }
+        } else {
+          input = tc.inputLines;
+        }
+
+        return {
+          input,
+          expectedOutput: tc.expectedOutput,
+        };
+      }),
   };
+
+  console.log("=== FORMATTED PROBLEM DATA2 ===");
+  console.log(JSON.stringify(problemData, null, 2));
+  const finalproblemData = JSON.stringify(problemData, null, 2);
+  console.log("=== END FORMATTED PROBLEM DATA2 ===");
 
   return (
     <div className="">
-      <CodeEditorPlatform />
+      <CodeEditorPlatform problem={problemData} />
     </div>
   );
 }
