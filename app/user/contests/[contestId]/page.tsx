@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState, useCallback, useRef } from "react";
-import { useRouter } from "next/navigation";
+import { useParams, useRouter } from "next/navigation";
 import { ArrowLeft, Clock, Code, FileText, Timer } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -25,7 +25,8 @@ export default function ContestProblemsPage() {
   const [timeRemaining, setTimeRemaining] = useState<string>("");
   const [progress, setProgress] = useState<number>(0);
   const router = useRouter();
-  const contestId = "3e052d58-78da-4f70-9e4e-5b2c2cfde719";
+  const params = useParams();
+  const contestId = params.contestId as string;
 
   // Use ref to store the latest contest data for interval
   const contestRef = useRef<Contest | null>(null);

@@ -14,6 +14,7 @@ import {
 } from "@/drizzle/schema";
 import { db } from "@/drizzle/db";
 import CodeEditorPlatform from "@/components/codeEditor/code-editor-platform";
+import ProblemDetails from "@/components/codeEditor/problemdetails";
 
 interface PageProps {
   params: {
@@ -96,6 +97,10 @@ export default async function ProblemAdminPage({ params }: PageProps) {
     where: eq(starterCode.problemId, problemId),
   });
 
+  const problemTestCases = await db.query.testCases.findMany({
+    where: eq(testCases.problemId, problemId),
+    orderBy: testCases.order, // Orders test cases based on the 'order' field
+  });
   // Fetch test cases if you have them in your database
   // const problemTestCases = await db.query.testCases.findMany({
   //   where: eq(testCases.problemId, problemId),
@@ -127,19 +132,18 @@ export default async function ProblemAdminPage({ params }: PageProps) {
         problemStarterCode.find((code) => code.language === "python")?.code ||
         "# Python code here\n# Your solution here",
     },
-    // Add test cases if you have them
-    // testCases: problemTestCases
-    //   .filter(tc => !tc.isHidden)
-    //   .map(tc => ({
-    //     input: tc.input.split('\n'),
-    //     expectedOutput: tc.expectedOutput,
-    //   })),
-    // hiddenTestCases: problemTestCases
-    //   .filter(tc => tc.isHidden)
-    //   .map(tc => ({
-    //     input: tc.input.split('\n'),
-    //     expectedOutput: tc.expectedOutput,
-    //   })),
+    testCases: problemTestCases
+      .filter((tc) => !tc.isHidden)
+      .map((tc) => ({
+        input: tc.inputLines,
+        expectedOutput: tc.expectedOutput,
+      })),
+    hiddenTestCases: problemTestCases
+      .filter((tc) => tc.isHidden)
+      .map((tc) => ({
+        input: tc.inputLines,
+        expectedOutput: tc.expectedOutput,
+      })),
   };
 
   // Log the formatted problem data
@@ -156,12 +160,12 @@ export default async function ProblemAdminPage({ params }: PageProps) {
     timeLimit: problem.timeLimit,
     memoryLimit: problem.memoryLimit,
     constraints: problemConstraints.map((c) => c.content),
-    hints: problemHints.map((h) => h.content),
     examples: problemExamples.map((example) => ({
       input: example.input,
       output: example.output,
       explanation: example.explanation || undefined,
     })),
+    hints: problemHints.map((h) => h.content),
     starterCode: {
       cpp:
         problemStarterCode.find((code) => code.language === "cpp")?.code ||
@@ -173,12 +177,18 @@ export default async function ProblemAdminPage({ params }: PageProps) {
         problemStarterCode.find((code) => code.language === "python")?.code ||
         "# Python code here",
     },
-    contestId: problem.contestId,
-    createdBy: problem.createdBy,
-    creatorName: problem.creator.name,
-    contestTitle: problem.contest.title,
-    submissions: [], // Empty for now
-    order: problem.order,
+    testCases: problemTestCases
+      .filter((tc) => !tc.isHidden)
+      .map((tc) => ({
+        input: tc.inputLines,
+        expectedOutput: tc.expectedOutput,
+      })),
+    hiddenTestCases: problemTestCases
+      .filter((tc) => tc.isHidden)
+      .map((tc) => ({
+        input: tc.inputLines,
+        expectedOutput: tc.expectedOutput,
+      })),
   };
 
   return (
