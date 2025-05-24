@@ -4,6 +4,7 @@ import { useState, useEffect, useRef } from "react";
 import CodeEditor from "./code-editor";
 import ProblemDescription from "./problem-description";
 import TestResults from "./test-results";
+import SubmissionHistory from "./submission-history";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import {
@@ -16,6 +17,10 @@ import {
 import { useToast } from "@/hooks/use-toast";
 import { executeCode } from "@/lib/code-execution";
 import { formatCode } from "@/lib/code-formatter";
+import {
+  createSubmission,
+  executeSubmission,
+} from "@/actions/submission-actions";
 import { ModeToggle } from "./theme-toggle";
 import { useMobile } from "@/hooks/use-mobile";
 import {
@@ -215,7 +220,7 @@ for _ in range(T):
   ],
 };
 
-export default function CodeEditorPlatform({
+export default function CodeEditorPlatformEnhanced({
   problem,
 }: CodeEditorPlatformProps) {
   // Use the provided problem or fall back to the sample problem
@@ -228,6 +233,9 @@ export default function CodeEditorPlatform({
   const [results, setResults] = useState<TestResult[] | null>(null);
   const [isExecuting, setIsExecuting] = useState<boolean>(false);
   const [isSubmitExecuting, setIsSubmitExecuting] = useState<boolean>(false);
+  const [currentSubmissionId, setCurrentSubmissionId] = useState<string | null>(
+    null
+  );
 
   const [isFormatting, setIsFormatting] = useState<boolean>(false);
   const [showProblem, setShowProblem] = useState<boolean>(true);
@@ -352,7 +360,6 @@ int main() {
     console.log("Code:", code);
     console.log("Language:", language);
     console.log("Test Cases:", currentProblem.testCases);
-    console.log("Hidden Test Cases:", currentProblem.hiddenTestCases);
 
     try {
       const executionResults = await executeCode(
@@ -390,11 +397,35 @@ int main() {
     setActiveTab("results");
 
     try {
+      // Create submission in database
+      const submission = await createSubmission(
+        currentProblem.id,
+        code,
+        language as "cpp" | "java" | "python"
+      );
+      console.log("Submission created:", submission);
+      // Set current submission ID for tracking
+
+      setCurrentSubmissionId(submission.id);
+
+      toast({
+        title: "Submission created",
+        description: "Your code has been submitted for evaluation.",
+      });
+
       // Combine visible and hidden test cases for submission
       const allTestCases = [
         ...currentProblem.testCases,
         ...currentProblem.hiddenTestCases,
       ];
+
+      // Execute submission and update database
+      const submissionResult = await executeSubmission(
+        submission.id,
+        allTestCases
+      );
+
+      // Get execution results for display
       const executionResults = await executeCode(code, language, allTestCases);
 
       // Mark which test cases are visible vs hidden
@@ -407,13 +438,16 @@ int main() {
       setResults(resultsWithVisibility);
 
       // Check if all test cases passed
-      const allPassed = executionResults.every((result) => result.passed);
+      const allPassed = submissionResult.status === "accepted";
 
       toast({
-        title: allPassed ? "All tests passed!" : "Some tests failed",
+        title: allPassed
+          ? "All tests passed!"
+          : `Submission ${submissionResult.status}`,
         description: allPassed
           ? "Congratulations! Your solution passed all test cases."
-          : "Your solution didn't pass all test cases. Please review and try again.",
+          : submissionResult.errorMessage ||
+            "Your solution didn't pass all test cases. Please review and try again.",
         variant: allPassed ? "default" : "destructive",
       });
 
@@ -473,15 +507,20 @@ int main() {
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 min-h-full p-2">
           {/* Problem description panel */}
           {showProblem && (
-            <Card className="p-0 lg:col-span-4 overflow-hidden max-h-fu">
-              <div className="bg-muted/50 px-4 py-2 border-b flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <FileText className="h-4 w-4 text-muted-foreground" />
-                  <h3 className="font-medium">Problem Description</h3>
+            <div className="lg:col-span-4 space-y-4">
+              <Card className="p-0 overflow-hidden">
+                <div className="bg-muted/50 px-4 py-2 border-b flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <FileText className="h-4 w-4 text-muted-foreground" />
+                    <h3 className="font-medium">Problem Description</h3>
+                  </div>
                 </div>
-              </div>
-              <ProblemDescription problem={currentProblem} />
-            </Card>
+                <ProblemDescription problem={currentProblem} />
+              </Card>
+
+              {/* Submission History */}
+              <SubmissionHistory problemId={currentProblem.id} />
+            </div>
           )}
 
           {/* Editor and test results panel */}
