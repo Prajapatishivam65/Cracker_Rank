@@ -121,9 +121,6 @@ export default function ProblemDescription({
             >
               <div className="bg-muted/50 px-3 py-1.5 text-xs font-medium border-b flex justify-between items-center">
                 <span>Example {index + 1}</span>
-                <span className="text-muted-foreground text-xs">
-                  Click to expand
-                </span>
               </div>
               <div className="p-3 space-y-3">
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">

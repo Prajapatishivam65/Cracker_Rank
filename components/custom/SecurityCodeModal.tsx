@@ -90,6 +90,8 @@ export function SecurityCodeModal({
             </Button>
             <Button
               type="submit"
+              className="text-white cursor-pointer"
+              // variant="primary"
               disabled={isSubmitting || !securityCode.trim()}
             >
               {isSubmitting ? "Verifying..." : "Submit"}

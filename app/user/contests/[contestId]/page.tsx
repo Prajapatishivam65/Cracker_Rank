@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useCallback, useRef } from "react";
 import { useParams, useRouter } from "next/navigation";
-import { ArrowLeft, Clock, Code, FileText, Timer } from "lucide-react";
+import { ArrowLeft, Clock, Code, FileText, Timer, Trophy } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -116,21 +116,35 @@ export default function ContestProblemsPage() {
   const getDifficultyColor = (difficulty: string) => {
     switch (difficulty) {
       case "easy":
-        return "bg-green-500 hover:bg-green-600";
+        return "bg-emerald-500 hover:bg-emerald-600 text-white";
       case "medium":
-        return "bg-yellow-500 hover:bg-yellow-600";
+        return "bg-amber-500 hover:bg-amber-600 text-white";
       case "hard":
-        return "bg-red-500 hover:bg-red-600";
+        return "bg-rose-500 hover:bg-rose-600 text-white";
       default:
-        return "bg-blue-500 hover:bg-blue-600";
+        return "bg-blue-500 hover:bg-blue-600 text-white";
+    }
+  };
+
+  // Function to get status badge
+  const getStatusBadge = (status: string) => {
+    switch (status) {
+      case "active":
+        return <Badge className="bg-green-500">Active</Badge>;
+      case "completed":
+        return <Badge className="bg-blue-500">Upcoming</Badge>;
+      case "ended":
+        return <Badge className="bg-gray-500">Completed</Badge>;
+      default:
+        return <Badge className="bg-gray-500">Unknown</Badge>;
     }
   };
 
   return (
-    <div className="container mx-auto py-8 px-4">
+    <div className="container mx-auto py-8 px-4 max-w-5xl">
       <Button
         variant="ghost"
-        className="mb-6 flex items-center gap-2"
+        className="mb-6 flex items-center gap-2 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
         onClick={() => router.push("/user")}
       >
         <ArrowLeft className="h-4 w-4" /> Back to Contests
@@ -150,69 +164,85 @@ export default function ContestProblemsPage() {
           </div>
         </div>
       ) : !contest ? (
-        <div className="text-center py-12">
+        <div className="text-center py-16 border rounded-lg bg-gray-50 dark:bg-gray-900">
+          <FileText className="h-16 w-16 mx-auto text-muted-foreground mb-4 opacity-50" />
           <h2 className="text-2xl font-semibold mb-2">Contest not found</h2>
-          <p className="text-muted-foreground mb-6">
+          <p className="text-muted-foreground mb-6 max-w-md mx-auto">
             The contest you're looking for doesn't exist or you don't have
             access.
           </p>
-          <Button onClick={() => router.push("/user")}>
+          <Button
+            onClick={() => router.push("/user")}
+            className="bg-primary hover:bg-primary/90 transition-colors"
+          >
             Return to Contests
           </Button>
         </div>
       ) : (
         <>
-          <div className="mb-8">
-            <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-4">
-              <div>
-                <h1 className="text-3xl font-bold">{contest.title}</h1>
-                <p className="text-muted-foreground">
+          <div className="mb-10 bg-gray-50 dark:bg-gray-900 p-6 rounded-xl shadow-sm">
+            <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-6 mb-4">
+              <div className="space-y-2">
+                <div className="flex items-center gap-2">
+                  <Trophy className="h-6 w-6 text-amber-500" />
+                  <h1 className="text-3xl font-bold">{contest.title}</h1>
+                  {getStatusBadge(contest.status)}
+                </div>
+                <p className="text-muted-foreground text-lg">
                   {contest.description || "No description provided."}
                 </p>
               </div>
-              <div className="flex items-center gap-2">
-                <Clock className="h-5 w-5" />
-                <span className="font-medium">{timeRemaining}</span>
+              <div className="flex items-center gap-3 px-4 py-3 bg-white dark:bg-gray-800 rounded-lg shadow-sm">
+                <Clock className="h-6 w-6 text-blue-500" />
+                <span className="font-semibold text-lg">{timeRemaining}</span>
               </div>
             </div>
 
             {contest.status === "active" && (
-              <div className="mb-6">
-                <div className="flex justify-between text-sm mb-2">
+              <div className="mt-6">
+                <div className="flex justify-between text-sm mb-2 font-medium">
                   <span>Contest Progress</span>
-                  <span>{progress}%</span>
+                  <span className="text-primary">{progress}%</span>
                 </div>
-                <Progress value={progress} className="h-2" />
+                <Progress
+                  value={progress}
+                  className="h-2 bg-gray-200 dark:bg-gray-700"
+                />
               </div>
             )}
           </div>
 
           {problems.length === 0 ? (
-            <div className="text-center py-12 border rounded-lg">
-              <FileText className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
+            <div className="text-center py-16 border rounded-lg bg-gray-50 dark:bg-gray-900">
+              <FileText className="h-16 w-16 mx-auto text-muted-foreground mb-4 opacity-50" />
               <h2 className="text-2xl font-semibold mb-2">
                 No problems available
               </h2>
-              <p className="text-muted-foreground">
+              <p className="text-muted-foreground max-w-md mx-auto">
                 This contest doesn't have any problems yet.
               </p>
             </div>
           ) : (
-            <div className="space-y-4">
+            <div className="space-y-5">
               {problems.map((problem, index) => (
-                <Card key={problem.id} className="overflow-hidden">
+                <Card
+                  key={problem.id}
+                  className="overflow-hidden border border-gray-200 dark:border-gray-800 shadow-sm hover:shadow-md transition-shadow"
+                >
                   <CardContent className="p-0">
-                    <div className="flex flex-col md:flex-row md:items-center p-4 gap-4">
+                    <div className="flex flex-col md:flex-row md:items-center p-5 gap-4">
                       <div className="flex-grow">
-                        <div className="flex items-center gap-2 mb-1">
-                          <span className="font-medium text-lg">
+                        <div className="flex flex-wrap items-center gap-2 mb-2">
+                          <span className="font-medium text-lg text-gray-600 dark:text-gray-400">
                             Problem {index + 1}:
                           </span>
-                          <h3 className="font-semibold text-lg">
+                          <h3 className="font-semibold text-xl">
                             {problem.title}
                           </h3>
                           <Badge
-                            className={getDifficultyColor(problem.difficulty)}
+                            className={`${getDifficultyColor(
+                              problem.difficulty
+                            )} ml-2 px-3 py-1 text-xs font-medium rounded-full`}
                           >
                             {problem.difficulty.charAt(0).toUpperCase() +
                               problem.difficulty.slice(1)}
@@ -220,11 +250,11 @@ export default function ContestProblemsPage() {
                         </div>
                         <div className="flex flex-wrap gap-x-6 gap-y-2 text-sm text-muted-foreground">
                           <div className="flex items-center gap-1">
-                            <Timer className="h-4 w-4" />
+                            <Timer className="h-4 w-4 text-blue-500" />
                             <span>Time Limit: {problem.timeLimit}</span>
                           </div>
                           <div className="flex items-center gap-1">
-                            <Code className="h-4 w-4" />
+                            <Code className="h-4 w-4 text-purple-500" />
                             <span>Memory Limit: {problem.memoryLimit}</span>
                           </div>
                         </div>
@@ -233,7 +263,7 @@ export default function ContestProblemsPage() {
                         onClick={() =>
                           router.push(`/user/contests/problems/${problem.id}`)
                         }
-                        className="md:self-center text-white"
+                        className="md:self-center bg-primary hover:bg-primary/90 text-white font-medium px-5 py-2 rounded-md transition-colors cursor-pointer"
                       >
                         Solve Problem
                       </Button>

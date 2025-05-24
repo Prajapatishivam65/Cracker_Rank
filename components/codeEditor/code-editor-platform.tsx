@@ -227,6 +227,8 @@ export default function CodeEditorPlatform({
   );
   const [results, setResults] = useState<TestResult[] | null>(null);
   const [isExecuting, setIsExecuting] = useState<boolean>(false);
+  const [isSubmitExecuting, setIsSubmitExecuting] = useState<boolean>(false);
+
   const [isFormatting, setIsFormatting] = useState<boolean>(false);
   const [showProblem, setShowProblem] = useState<boolean>(true);
   const [activeTab, setActiveTab] = useState<string>("editor");
@@ -383,7 +385,7 @@ int main() {
   };
 
   const submitCode = async () => {
-    setIsExecuting(true);
+    setIsSubmitExecuting(true);
     setResults(null);
     setActiveTab("results");
 
@@ -426,7 +428,7 @@ int main() {
         variant: "destructive",
       });
     } finally {
-      setIsExecuting(false);
+      setIsSubmitExecuting(false);
     }
   };
 
@@ -477,9 +479,6 @@ int main() {
                   <FileText className="h-4 w-4 text-muted-foreground" />
                   <h3 className="font-medium">Problem Description</h3>
                 </div>
-                <div className="text-xs px-2 py-0.5 rounded-full bg-primary/10 text-primary">
-                  {currentProblem.difficulty}
-                </div>
               </div>
               <ProblemDescription problem={currentProblem} />
             </Card>
@@ -516,7 +515,7 @@ int main() {
                     onClick={handleFormatCode}
                     disabled={isFormatting}
                     title="Format Code (Ctrl+S / Cmd+S)"
-                    className="h-8"
+                    className="h-8 cursor-pointer"
                   >
                     {isFormatting ? (
                       <Loader2 className="h-3 w-3 animate-spin mr-1" />
@@ -533,7 +532,7 @@ int main() {
                     size="sm"
                     onClick={runCode}
                     disabled={isExecuting || isFormatting}
-                    className="flex-1 sm:flex-none h-8"
+                    className="flex-1 sm:flex-none h-8 cursor-pointer"
                   >
                     {isExecuting ? (
                       <Loader2 className="mr-1 h-3 w-3 animate-spin" />
@@ -545,10 +544,10 @@ int main() {
                   <Button
                     size="sm"
                     onClick={submitCode}
-                    disabled={isExecuting || isFormatting}
-                    className="flex-1 sm:flex-none h-8"
+                    disabled={isSubmitExecuting || isFormatting}
+                    className="flex-1 sm:flex-none h-8 text-white cursor-pointer"
                   >
-                    {isExecuting ? (
+                    {isSubmitExecuting ? (
                       <Loader2 className="mr-1 h-3 w-3 animate-spin" />
                     ) : (
                       <Send className="mr-1 h-3 w-3" />
@@ -594,7 +593,7 @@ int main() {
                     <div className="p-4 h-[calc(100vh-300px)] overflow-auto">
                       <TestResults
                         results={results}
-                        isLoading={isExecuting}
+                        isLoading={isExecuting || isSubmitExecuting}
                         language={language}
                       />
                     </div>
@@ -613,11 +612,11 @@ int main() {
                 </div>
 
                 {/* Test Results Card with ref for scrolling */}
-                <div ref={testResultsRef} className="scroll-mt-4 border-t">
+                <div ref={testResultsRef} className="scroll-mt-4 border-t p-4">
                   <div className="p-4 max-h-full overflow-hidden">
                     <TestResults
                       results={results}
-                      isLoading={isExecuting}
+                      isLoading={isExecuting || isSubmitExecuting}
                       language={language}
                     />
                   </div>

@@ -137,7 +137,7 @@ export default function UserContestsPage() {
 
     setSecurityCode(contest.securityCode || "");
 
-    if (contestStatus === "ended") {
+    if (contestStatus === "ended" && securityCode === contest.securityCode) {
       router.push(`/user/contests/${contest.id}`);
       return;
     }
@@ -192,7 +192,7 @@ export default function UserContestsPage() {
           </p>
         </div>
         <Button
-          className="mt-4 md:mt-0"
+          className="mt-4 md:mt-0 text-white bg-blue-600 hover:bg-blue-700"
           onClick={() => router.push("/user/leaderboard")}
         >
           <Trophy className="mr-2 h-4 w-4" />
@@ -247,8 +247,8 @@ export default function UserContestsPage() {
                     contestStatus === "active"
                       ? "rgb(34, 197, 94)"
                       : contestStatus === "upcoming"
-                      ? "rgb(59, 130, 246)"
-                      : "rgb(107, 114, 128)",
+                        ? "rgb(59, 130, 246)"
+                        : "rgb(107, 114, 128)",
                 }}
               >
                 <CardHeader className="pb-2">
@@ -306,24 +306,24 @@ export default function UserContestsPage() {
                 </CardContent>
                 <CardFooter>
                   <Button
-                    className="w-full"
+                    className="w-full text-white bg-blue-600 hover:bg-blue-700"
                     onClick={() => handleContestAccess(contest)}
                     disabled={contestStatus === "draft"}
                     variant={
                       contestStatus === "active"
                         ? "default"
                         : contestStatus === "ended"
-                        ? "outline"
-                        : "secondary"
+                          ? "outline"
+                          : "secondary"
                     }
                   >
                     {contestStatus === "active"
                       ? "Enter Contest"
                       : contestStatus === "upcoming"
-                      ? "View Details"
-                      : contestStatus === "ended"
-                      ? "View Results"
-                      : "Coming Soon"}
+                        ? "View Details"
+                        : contestStatus === "ended"
+                          ? "View Results"
+                          : "Coming Soon"}
                   </Button>
                 </CardFooter>
               </Card>
